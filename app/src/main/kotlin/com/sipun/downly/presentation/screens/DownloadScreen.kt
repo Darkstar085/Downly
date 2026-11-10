@@ -44,7 +44,12 @@ fun DownloadScreen(
     modifier: Modifier
 ) {
     val context = LocalContext.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val accentGreen = Color(0xFF22C55E)
+
+    LaunchedEffect(Unit) {
+        focusManager.clearFocus()
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize().imePadding(),

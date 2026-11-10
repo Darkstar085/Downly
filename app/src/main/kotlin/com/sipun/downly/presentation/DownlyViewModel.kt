@@ -894,7 +894,45 @@ class DownlyViewModel : ViewModel() {
     }
 
     fun delete(record: DownloadRecord) {
-        mutate { copy(history = history.filterNot { it.id == record.id }) }
+        removeRecord(record, deleteFileFromStorage = false)
+    }
+
+    fun removeRecord(record: DownloadRecord, deleteFileFromStorage: Boolean) {
+        val context = appContext
+        cancelledIds.add(record.id)
+        pausedIds.remove(record.id)
+        appContext?.let { DownloadWorkManager.cancel(it, record.id) }
+        appContext?.let { DownloadNotificationHelper.cancel(it, record.id.hashCode()) }
+        YoutubeDL.destroyProcessById(record.id)
+
+        mutate {
+            copy(
+                history = history.filterNot { it.id == record.id },
+                message = if (deleteFileFromStorage) "Download and file removed" else "Download removed from list"
+            )
+        }
+
+        if (context != null) {
+            worker.execute {
+                val root = File(context.getExternalFilesDir(null) ?: context.filesDir, "Downly")
+                File(root, record.id).deleteRecursively()
+
+                if (deleteFileFromStorage && !record.filePath.isNullOrBlank()) {
+                    runCatching {
+                        val path = record.filePath
+                        val name = path.substringAfterLast('/')
+                        val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                        val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
+                        context.contentResolver.delete(collection, selection, arrayOf(name))
+                    }
+                    runCatching {
+                        val file = File(record.filePath)
+                        if (file.exists()) file.delete()
+                    }
+                }
+                persistHistory(context)
+            }
+        }
     }
 
     fun clearFinished() {

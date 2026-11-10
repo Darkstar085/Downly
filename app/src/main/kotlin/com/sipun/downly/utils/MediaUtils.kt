@@ -460,8 +460,48 @@ data class DirectFileProbe(
     val mimeType: String,
     val fileSize: Long?,
     val extension: String,
-    val category: String
+    val category: String,
+    val folderPath: String,
+    val relativeDir: String
 )
+
+data class FileCategoryInfo(
+    val categoryName: String,
+    val folderPath: String,
+    val relativeDir: String,
+    val badgeLabel: String
+)
+
+fun resolveFileCategory(ext: String, mime: String, mode: MediaMode): FileCategoryInfo {
+    val cleanExt = ext.lowercase(Locale.ROOT)
+    val cleanMime = mime.lowercase(Locale.ROOT)
+
+    if (mode == MediaMode.VIDEO || cleanMime.startsWith("video/") || cleanExt in setOf("mp4", "mkv", "webm", "avi", "mov", "flv", "wmv", "3gp", "m4v", "ts")) {
+        return FileCategoryInfo("Video", "Downloads/Downly/Videos", "Download/Downly/Videos/", cleanExt.uppercase(Locale.ROOT).ifBlank { "VIDEO" })
+    }
+    if (mode == MediaMode.AUDIO || cleanMime.startsWith("audio/") || cleanExt in setOf("mp3", "m4a", "wav", "flac", "aac", "ogg", "opus", "wma", "m4b")) {
+        return FileCategoryInfo("Audio", "Downloads/Downly/Music", "Download/Downly/Music/", cleanExt.uppercase(Locale.ROOT).ifBlank { "AUDIO" })
+    }
+    if (cleanMime.startsWith("image/") || cleanExt in setOf("jpg", "jpeg", "png", "webp", "gif", "svg", "bmp", "ico", "heic", "tiff")) {
+        return FileCategoryInfo("Photos", "Downloads/Downly/Photos", "Download/Downly/Photos/", cleanExt.uppercase(Locale.ROOT).ifBlank { "PHOTO" })
+    }
+    if (cleanExt in setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "epub", "rtf") ||
+        cleanMime.contains("pdf") || cleanMime.contains("document") || cleanMime.contains("sheet") || cleanMime.contains("presentation") || cleanMime.contains("text/")) {
+        return FileCategoryInfo("Documents", "Downloads/Downly/Documents", "Download/Downly/Documents/", cleanExt.uppercase(Locale.ROOT).ifBlank { "DOC" })
+    }
+    if (cleanExt in setOf("zip", "rar", "7z", "tar", "gz", "bz2", "iso", "xz") ||
+        cleanMime.contains("zip") || cleanMime.contains("compressed") || cleanMime.contains("archive")) {
+        return FileCategoryInfo("Compressed", "Downloads/Downly/Compressed", "Download/Downly/Compressed/", cleanExt.uppercase(Locale.ROOT).ifBlank { "ZIP" })
+    }
+    if (cleanExt in setOf("apk", "exe", "msi", "deb", "dmg", "sh", "appimage") ||
+        cleanMime.contains("vnd.android.package-archive") || cleanMime.contains("executable")) {
+        return FileCategoryInfo("Programs", "Downloads/Downly/Programs", "Download/Downly/Programs/", cleanExt.uppercase(Locale.ROOT).ifBlank { "APP" })
+    }
+    if (cleanExt == "torrent" || cleanMime.contains("torrent")) {
+        return FileCategoryInfo("Torrents", "Downloads/Downly/Torrents", "Download/Downly/Torrents/", "TORRENT")
+    }
+    return FileCategoryInfo("Files", "Downloads/Downly", "Download/Downly/", cleanExt.uppercase(Locale.ROOT).ifBlank { "FILE" })
+}
 
 fun probeDirectFile(urlStr: String): DirectFileProbe? {
     return runCatching {
@@ -470,10 +510,12 @@ fun probeDirectFile(urlStr: String): DirectFileProbe? {
         val ext = rawFileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
 
         val knownDirectExtensions = setOf(
-            "apk", "zip", "pdf", "rar", "7z", "tar", "gz", "iso", "exe", "dmg",
-            "png", "jpg", "jpeg", "webp", "gif", "svg", "bmp",
-            "mp4", "mkv", "avi", "mov", "webm",
-            "mp3", "wav", "aac", "flac", "ogg", "m4a"
+            "apk", "exe", "msi", "deb", "dmg", "sh", "appimage",
+            "zip", "rar", "7z", "tar", "gz", "bz2", "iso", "xz",
+            "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "epub", "rtf",
+            "png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "ico", "heic", "tiff",
+            "mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "3gp", "m4v", "ts",
+            "mp3", "wav", "aac", "flac", "ogg", "m4a", "opus", "wma", "torrent"
         )
 
         val isExtensionMatch = ext in knownDirectExtensions
@@ -513,39 +555,22 @@ fun probeDirectFile(urlStr: String): DirectFileProbe? {
             mimeType.startsWith("application/") ||
             mimeType.startsWith("image/") ||
             mimeType.startsWith("audio/") ||
-            mimeType.startsWith("video/")
+            mimeType.startsWith("video/") ||
+            mimeType.startsWith("text/")
         ) && !mimeType.contains("html") && !mimeType.contains("json")
 
         if (!isExtensionMatch && !isMimeDirect) return null
 
-        val category = when {
-            effectiveExt == "apk" || mimeType.contains("vnd.android.package-archive") -> "APK"
-            effectiveExt in setOf("zip", "rar", "7z", "tar", "gz") || mimeType.contains("zip") || mimeType.contains("compressed") -> "ZIP"
-            effectiveExt == "pdf" || mimeType.contains("pdf") -> "PDF"
-            mimeType.startsWith("image/") || effectiveExt in setOf("png", "jpg", "jpeg", "webp", "gif") -> effectiveExt.uppercase(Locale.ROOT).ifBlank { "IMAGE" }
-            mimeType.startsWith("video/") || effectiveExt in setOf("mp4", "mkv", "mov", "webm", "avi") -> effectiveExt.uppercase(Locale.ROOT).ifBlank { "VIDEO" }
-            mimeType.startsWith("audio/") || effectiveExt in setOf("mp3", "m4a", "wav", "flac", "aac", "ogg") -> effectiveExt.uppercase(Locale.ROOT).ifBlank { "AUDIO" }
-            else -> effectiveExt.uppercase(Locale.ROOT).ifBlank { "FILE" }
-        }
-
-        val defaultMime = when (effectiveExt) {
-            "apk" -> "application/vnd.android.package-archive"
-            "zip" -> "application/zip"
-            "pdf" -> "application/pdf"
-            "png" -> "image/png"
-            "jpg", "jpeg" -> "image/jpeg"
-            "webp" -> "image/webp"
-            "mp4" -> "video/mp4"
-            "mp3" -> "audio/mpeg"
-            else -> if (mimeType.isNotBlank()) mimeType else "application/octet-stream"
-        }
+        val catInfo = resolveFileCategory(effectiveExt, mimeType, MediaMode.FILE)
 
         DirectFileProbe(
             fileName = finalFileName,
-            mimeType = if (mimeType.isNotBlank()) mimeType else defaultMime,
+            mimeType = mimeType.ifBlank { "application/octet-stream" },
             fileSize = contentLength,
             extension = effectiveExt,
-            category = category
+            category = catInfo.badgeLabel,
+            folderPath = catInfo.folderPath,
+            relativeDir = catInfo.relativeDir
         )
     }.getOrNull()
 }
