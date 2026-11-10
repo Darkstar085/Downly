@@ -44,18 +44,18 @@ fun ExpressiveBottomSheetDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 560.dp),
-                shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp, bottomStart = 32.dp, bottomEnd = 32.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.96f),
-                tonalElevation = 24.dp,
-                shadowElevation = 36.dp,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp, bottomStart = 28.dp, bottomEnd = 28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 0.dp,
+                shadowElevation = 24.dp,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 28.dp, vertical = 32.dp),
+                        .padding(horizontal = 24.dp, vertical = 28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(22.dp)
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -68,9 +68,9 @@ fun ExpressiveBottomSheetDialog(
                     if (icon != null) {
                         Box(
                             modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(28.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)),
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(Color(0xFF22C55E).copy(alpha = 0.18f)),
                             contentAlignment = Alignment.Center
                         ) {
                             icon()
@@ -128,11 +128,11 @@ fun ExpressiveBottomSheetDialog(
                             onClick = onConfirm,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(54.dp),
-                            shape = RoundedCornerShape(27.dp),
+                                .height(50.dp),
+                            shape = RoundedCornerShape(25.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                containerColor = Color(0xFF22C55E),
+                                contentColor = Color.White
                             )
                         ) {
                             Text(

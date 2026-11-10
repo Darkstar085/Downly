@@ -11,6 +11,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.os.Handler
 import android.os.Looper
+import java.util.Locale
 import androidx.lifecycle.ViewModel
 import com.sipun.downly.runtime.RuntimeBundleInstaller
 import com.sipun.downly.data.DownloadRecord
@@ -144,7 +145,18 @@ class DownlyViewModel : ViewModel() {
     }
 
     fun setUrl(value: String) = mutate { copy(url = value, preview = null, message = "") }
-    fun setMode(value: MediaMode) = mutate { copy(mode = value) }
+    fun setMode(value: MediaMode) = mutate {
+        val location = when (value) {
+            MediaMode.VIDEO -> "Downloads/Downly/Videos"
+            MediaMode.AUDIO -> "Downloads/Downly/Music"
+            MediaMode.FILE -> {
+                val ext = preview?.fileExtension.orEmpty()
+                val catInfo = com.sipun.downly.utils.resolveFileCategory(ext, preview?.mimeType.orEmpty(), MediaMode.FILE)
+                catInfo.folderPath
+            }
+        }
+        copy(mode = value, downloadLocation = location)
+    }
     fun setQuality(value: String) = mutate { copy(quality = value) }
     fun setTab(value: Int) = mutate { copy(tab = value) }
     fun setCustomFileName(value: String) = mutate { copy(customFileName = value) }
@@ -304,6 +316,7 @@ class DownlyViewModel : ViewModel() {
                             preview = preview,
                             mode = MediaMode.FILE,
                             customFileName = directProbe.fileName,
+                            downloadLocation = directProbe.folderPath,
                             message = "Direct file link ready"
                         )
                     }
@@ -323,7 +336,8 @@ class DownlyViewModel : ViewModel() {
                     audioOptions = mediaOptions.audioOptions,
                     isDirectFile = false
                 )
-                mutate { copy(busy = false, preview = preview, mode = MediaMode.VIDEO, recommendedQuality = recommendQuality(preview.qualityOptions, connectionType), message = "Media details ready") }
+                val location = if (current.mode == MediaMode.AUDIO) "Downloads/Downly/Music" else "Downloads/Downly/Videos"
+                mutate { copy(busy = false, preview = preview, mode = MediaMode.VIDEO, downloadLocation = location, recommendedQuality = recommendQuality(preview.qualityOptions, connectionType), message = "Media details ready") }
             } catch (error: Exception) {
                 val fallbackProbe = com.sipun.downly.utils.probeDirectFile(url)
                 if (fallbackProbe != null) {
@@ -343,6 +357,7 @@ class DownlyViewModel : ViewModel() {
                             preview = preview,
                             mode = MediaMode.FILE,
                             customFileName = fallbackProbe.fileName,
+                            downloadLocation = fallbackProbe.folderPath,
                             message = "Direct file link ready"
                         )
                     }
@@ -476,11 +491,7 @@ class DownlyViewModel : ViewModel() {
         mainHandler.post { latch.countDown() }
         latch.await()
         val context = appContext ?: return
-        val persistenceLatch = java.util.concurrent.CountDownLatch(1)
-        persistenceWorker.execute { persistenceLatch.countDown() }
-        persistenceLatch.await()
-        val workerRecord = _state.value.history.firstOrNull { it.id == id }
-        val encoded = encodeHistory(mergeWorkerRecordIntoHistory(readHistory(context), workerRecord))
+        val encoded = encodeHistory(_state.value.history)
         context.getSharedPreferences("downly-history", Context.MODE_PRIVATE)
             .edit()
             .putString("records", encoded)
@@ -641,30 +652,39 @@ class DownlyViewModel : ViewModel() {
     }
 
     private fun findExistingMedia(context: Context, fileName: String, mode: MediaMode, identityKey: String?): Pair<Uri, String>? {
-        val relativeDirectory = when (mode) {
-            MediaMode.AUDIO -> Environment.DIRECTORY_DOWNLOADS + "/Downly/Music/"
-            MediaMode.VIDEO -> Environment.DIRECTORY_DOWNLOADS + "/Downly/Videos/"
-            MediaMode.FILE -> Environment.DIRECTORY_DOWNLOADS + "/Downly/"
-        }
-        val altDirectory = relativeDirectory.trimEnd('/')
+        val ext = fileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
+        val catInfo = com.sipun.downly.utils.resolveFileCategory(ext, "", mode)
+        val relativeDirectory = catInfo.relativeDir
+
+        val folderSubPath = catInfo.folderPath.removePrefix("Downloads/").removePrefix("Download/")
+        val publicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), folderSubPath)
+        val existingLocalFile = File(publicDir, fileName)
+
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
         val knownUri = identityKey?.let { readMediaIdMapping(context, it) }
-        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME)
-        val selection = "${MediaStore.MediaColumns.RELATIVE_PATH} = ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} = ?"
+        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.RELATIVE_PATH)
+        val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
+
         context.contentResolver.query(
-            collection, projection, selection, arrayOf(relativeDirectory, altDirectory), null
+            collection, projection, selection, arrayOf(fileName), null
         )?.use { cursor ->
             while (cursor.moveToNext()) {
                 val name = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME))
-                val matchesName = name.equals(fileName, ignoreCase = true)
+                val relPath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)) ?: relativeDirectory
                 val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))
                 val uri = ContentUris.withAppendedId(collection, id)
                 val matchesStoredId = knownUri != null && knownUri == uri.toString()
-                if (matchesName || matchesStoredId) {
-                    return uri to (relativeDirectory + name)
+                if (name.equals(fileName, ignoreCase = true) || matchesStoredId) {
+                    return uri to (relPath + name)
                 }
             }
         }
+
+        if (existingLocalFile.exists() && existingLocalFile.isFile) {
+            val fileUri = Uri.fromFile(existingLocalFile)
+            return fileUri to (relativeDirectory + fileName)
+        }
+
         return null
     }
 
@@ -700,34 +720,38 @@ class DownlyViewModel : ViewModel() {
                 val source = File(prompt.sourcePath)
                 if (replaceExisting) {
                     mutate { copy(duplicateReplacementInProgress = true, message = "Replacing existing file…") }
-                    val publicPath = replaceMediaStoreItem(context, Uri.parse(prompt.existingUri), source, prompt.existingPath)
-                    source.delete()
-                    val replacement = _state.value.history.firstOrNull { it.id == prompt.recordId }
-                        ?.copy(
+                    val publicPath = replaceMediaStoreItem(context, prompt.existingUri, source, prompt.existingPath, prompt.mode)
+                    if (source.exists()) source.delete()
+
+                    val replacement = DownloadRecord(
+                        id = prompt.recordId,
+                        url = _state.value.history.firstOrNull { it.id == prompt.recordId }?.url.orEmpty(),
+                        title = prompt.fileName,
+                        status = DownloadStatus.COMPLETE,
+                        progress = 1f,
+                        detail = "Download complete · replaced existing file",
+                        filePath = publicPath,
+                        mode = prompt.mode
+                    )
+
+                    mutate {
+                        copy(
+                            history = reconcileReplacedHistory(history.filterNot { it.id == prompt.recordId } + replacement, replacement, publicPath),
+                            duplicatePrompt = null,
+                            duplicateReplacementInProgress = false,
+                            message = "Existing file replaced"
+                        )
+                    }
+                    clearDuplicatePrompt(context)
+                } else {
+                    if (source.exists()) source.delete()
+                    setRecord(prompt.recordId) {
+                        copy(
                             status = DownloadStatus.COMPLETE,
                             progress = 1f,
-                            detail = "Download complete · replaced existing file",
-                            filePath = publicPath
+                            detail = "Already downloaded · kept existing file",
+                            filePath = prompt.existingPath
                         )
-                    if (replacement != null) {
-                        mutate {
-                            copy(
-                                history = reconcileReplacedHistory(history.map { if (it.id == replacement.id) replacement else it }, replacement, publicPath),
-                                duplicatePrompt = null,
-                                duplicateReplacementInProgress = false,
-                                message = "Existing file replaced"
-                            )
-                        }
-                        clearDuplicatePrompt(context)
-                    } else {
-                        mutate { copy(duplicatePrompt = null, duplicateReplacementInProgress = false, message = "Existing file replaced") }
-                        clearDuplicatePrompt(context)
-                    }
-                } else {
-                    source.delete()
-                    setRecord(prompt.recordId) {
-                        copy(status = DownloadStatus.COMPLETE, progress = 1f,
-                            detail = "Already downloaded · kept existing file", filePath = prompt.existingPath)
                     }
                     mutate { copy(duplicatePrompt = null, duplicateReplacementInProgress = false, message = "Kept the existing download") }
                     clearDuplicatePrompt(context)
@@ -742,64 +766,73 @@ class DownlyViewModel : ViewModel() {
         }
     }
 
-    private fun replaceMediaStoreItem(context: Context, existingUri: Uri, source: File, existingPath: String): String {
+    private fun replaceMediaStoreItem(context: Context, existingUriString: String, source: File, existingPath: String, mode: MediaMode): String {
         val resolver = context.contentResolver
-        val backup = File.createTempFile("downly-replace-", ".bak", context.cacheDir)
-        try {
-            replaceWithRollback(
-                backup = {
-                    resolver.openInputStream(existingUri)?.use { input ->
-                        backup.outputStream().use { output -> input.copyTo(output) }
-                    } ?: throw IOException("Could not back up the existing download.")
-                },
-                replace = {
-                    resolver.openOutputStream(existingUri, "wt")?.use { output ->
-                        source.inputStream().use { input -> input.copyTo(output) }
-                    } ?: throw IOException("Could not write the replacement file.")
-                },
-                restore = {
-                    resolver.openOutputStream(existingUri, "wt")?.use { output ->
-                        backup.inputStream().use { input -> input.copyTo(output) }
-                    } ?: throw IOException("Could not restore the existing download.")
-                }
-            )
-            return existingPath
-        } finally {
-            backup.delete()
-        }
-    }
+        val uri = runCatching { Uri.parse(existingUriString) }.getOrNull()
 
+        val ext = source.extension.lowercase(Locale.ROOT)
+        val catInfo = com.sipun.downly.utils.resolveFileCategory(ext, "", mode)
+        val folderSubPath = catInfo.folderPath.removePrefix("Downloads/").removePrefix("Download/")
+        val publicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), folderSubPath)
+        if (!publicDir.exists()) publicDir.mkdirs()
+
+        val localTargetFile = File(publicDir, source.name)
+
+        runCatching {
+            if (localTargetFile.exists()) localTargetFile.delete()
+            source.copyTo(localTargetFile, overwrite = true)
+            return catInfo.relativeDir + source.name
+        }
+
+        if (uri != null && uri.scheme == "content") {
+            runCatching {
+                resolver.openOutputStream(uri, "wt")?.use { output ->
+                    source.inputStream().use { input -> input.copyTo(output) }
+                }
+                return existingPath.ifBlank { catInfo.relativeDir + source.name }
+            }
+        }
+
+        return publishToMediaStore(context, source, mode, null)
+    }
 
     private fun publishToMediaStore(context: Context, source: File, mode: MediaMode, identityKey: String?): String {
         val resolver = context.contentResolver
-        val relativeDirectory = when (mode) {
-            MediaMode.AUDIO -> Environment.DIRECTORY_DOWNLOADS + "/Downly/Music/"
-            MediaMode.VIDEO -> Environment.DIRECTORY_DOWNLOADS + "/Downly/Videos/"
-            MediaMode.FILE -> Environment.DIRECTORY_DOWNLOADS + "/Downly/"
+        val ext = source.extension.lowercase(Locale.ROOT)
+        val catInfo = com.sipun.downly.utils.resolveFileCategory(ext, "", mode)
+        val relativeDirectory = catInfo.relativeDir
+
+        runCatching {
+            val subPath = catInfo.folderPath.removePrefix("Downloads/")
+            val fullPublicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), subPath)
+            if (!fullPublicDir.exists()) fullPublicDir.mkdirs()
         }
-        val mimeType = when (mode) {
-            MediaMode.AUDIO -> "audio/mpeg"
-            MediaMode.FILE -> {
-                when (source.extension.lowercase()) {
-                    "apk" -> "application/vnd.android.package-archive"
-                    "zip" -> "application/zip"
-                    "pdf" -> "application/pdf"
-                    "png" -> "image/png"
-                    "jpg", "jpeg" -> "image/jpeg"
-                    "webp" -> "image/webp"
-                    "mp4" -> "video/mp4"
-                    "mp3" -> "audio/mpeg"
-                    else -> "application/octet-stream"
-                }
+
+        val mimeType = when (catInfo.categoryName) {
+            "Video" -> when (ext) {
+                "webm" -> "video/webm"
+                "mkv" -> "video/x-matroska"
+                "mov" -> "video/quicktime"
+                else -> "video/mp4"
             }
-            MediaMode.VIDEO -> {
-                when (source.extension.lowercase()) {
-                    "webm" -> "video/webm"
-                    "mkv" -> "video/x-matroska"
-                    "mov" -> "video/quicktime"
-                    else -> "video/mp4"
-                }
+            "Audio" -> "audio/mpeg"
+            "Photos" -> when (ext) {
+                "png" -> "image/png"
+                "jpg", "jpeg" -> "image/jpeg"
+                "webp" -> "image/webp"
+                "gif" -> "image/gif"
+                else -> "image/jpeg"
             }
+            "Documents" -> when (ext) {
+                "pdf" -> "application/pdf"
+                "txt" -> "text/plain"
+                "doc", "docx" -> "application/msword"
+                "xls", "xlsx" -> "application/vnd.ms-excel"
+                else -> "application/octet-stream"
+            }
+            "Compressed" -> "application/zip"
+            "Programs" -> "application/vnd.android.package-archive"
+            else -> "application/octet-stream"
         }
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
         val values = ContentValues().apply {
@@ -905,14 +938,16 @@ class DownlyViewModel : ViewModel() {
         appContext?.let { DownloadNotificationHelper.cancel(it, record.id.hashCode()) }
         YoutubeDL.destroyProcessById(record.id)
 
+        val nextHistory = _state.value.history.filterNot { it.id == record.id }
         mutate {
             copy(
-                history = history.filterNot { it.id == record.id },
+                history = nextHistory,
                 message = if (deleteFileFromStorage) "Download and file removed" else "Download removed from list"
             )
         }
 
         if (context != null) {
+            persistHistoryImmediately(context, nextHistory)
             worker.execute {
                 val root = File(context.getExternalFilesDir(null) ?: context.filesDir, "Downly")
                 File(root, record.id).deleteRecursively()
@@ -930,16 +965,20 @@ class DownlyViewModel : ViewModel() {
                         if (file.exists()) file.delete()
                     }
                 }
-                persistHistory(context)
             }
         }
     }
 
     fun clearFinished() {
+        val context = appContext
+        val nextHistory = _state.value.history.filterNot {
+            it.status in setOf(DownloadStatus.COMPLETE, DownloadStatus.FAILED, DownloadStatus.CANCELLED)
+        }
         mutate {
-            copy(history = history.filterNot {
-                it.status in setOf(DownloadStatus.COMPLETE, DownloadStatus.FAILED, DownloadStatus.CANCELLED)
-            })
+            copy(history = nextHistory)
+        }
+        if (context != null) {
+            persistHistoryImmediately(context, nextHistory)
         }
     }
 

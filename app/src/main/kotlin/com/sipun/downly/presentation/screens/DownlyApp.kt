@@ -7,6 +7,8 @@ import android.os.Build
 import android.util.Size
 import android.net.Uri
 import android.provider.MediaStore
+import java.io.File
+import java.util.Locale
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -102,7 +104,20 @@ private data class ExistingMediaDetails(
 )
 
 private fun loadExistingMediaDetails(context: Context, uriString: String, fallbackName: String): ExistingMediaDetails {
-    val uri = Uri.parse(uriString)
+    val uri = runCatching { Uri.parse(uriString) }.getOrNull()
+    if (uri != null && uri.scheme == "file") {
+        val file = File(uri.path.orEmpty())
+        if (file.exists()) {
+            val ext = file.extension.lowercase(Locale.ROOT)
+            return ExistingMediaDetails(
+                name = file.name,
+                mimeType = ext.uppercase(Locale.ROOT),
+                sizeBytes = file.length(),
+                modifiedMillis = file.lastModified(),
+                durationMillis = null
+            )
+        }
+    }
     val projection = arrayOf(
         MediaStore.MediaColumns.DISPLAY_NAME,
         MediaStore.MediaColumns.MIME_TYPE,
@@ -111,6 +126,7 @@ private fun loadExistingMediaDetails(context: Context, uriString: String, fallba
         MediaStore.Video.VideoColumns.DURATION
     )
     return runCatching {
+        if (uri == null) return@runCatching ExistingMediaDetails(fallbackName, "", null, null, null)
         context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
                 fun longValue(column: String): Long? {
@@ -123,7 +139,7 @@ private fun loadExistingMediaDetails(context: Context, uriString: String, fallba
                     name = if (nameIndex >= 0) cursor.getString(nameIndex) ?: fallbackName else fallbackName,
                     mimeType = if (mimeIndex >= 0) cursor.getString(mimeIndex).orEmpty() else "",
                     sizeBytes = longValue(MediaStore.MediaColumns.SIZE),
-                    modifiedMillis = longValue(MediaStore.MediaColumns.DATE_MODIFIED)?.times(1000),
+                    modifiedMillis = longValue(MediaStore.MediaColumns.DATE_MODIFIED)?.let { if (it < 10_000_000_000L) it * 1000 else it },
                     durationMillis = longValue(MediaStore.Video.VideoColumns.DURATION)
                 )
             } else ExistingMediaDetails(fallbackName, "", null, null, null)
@@ -272,8 +288,8 @@ fun DownlyApp(
                             IconButton(onClick = { vm.setIsSearchActive(!state.isSearchActive) }) {
                                 Icon(Icons.Rounded.Search, contentDescription = "Search")
                             }
-                            IconButton(onClick = { vm.clearFinished() }) {
-                                Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
+                            IconButton(onClick = { vm.setTab(2) }) {
+                                Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings_title))
                             }
                         }
                     },
@@ -335,7 +351,9 @@ fun DownlyApp(
         }
 
         state.duplicatePrompt?.let { prompt ->
-            val targetFolder = if (prompt.mode == MediaMode.AUDIO) "Music/Downly" else "Movies/Downly"
+            val ext = prompt.fileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
+            val catInfo = com.sipun.downly.utils.resolveFileCategory(ext, "", prompt.mode)
+            val targetFolder = catInfo.folderPath
             val details = remember(prompt.existingUri, prompt.fileName) {
                 loadExistingMediaDetails(context, prompt.existingUri, prompt.fileName)
             }
@@ -357,7 +375,7 @@ fun DownlyApp(
                     shape = DownlyUiShapes.dialog,
                     color = MaterialTheme.colorScheme.surface,
                     border = downlyCardBorder(),
-                    tonalElevation = 8.dp,
+                    tonalElevation = 0.dp,
                     shadowElevation = 18.dp
                 ) {
                     Column(
@@ -366,11 +384,16 @@ fun DownlyApp(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
-                                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(50))
-                                    .background(Color(0xFFFFE0D6)),
+                                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF22C55E).copy(alpha = 0.18f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("!", color = Color(0xFFE43D20), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                                Icon(
+                                    Icons.Rounded.Folder,
+                                    contentDescription = null,
+                                    tint = Color(0xFF22C55E),
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {

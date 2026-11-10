@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -270,7 +271,6 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
     ) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Thumbnail / Artwork / Icon Container Box
                 Box(
                     Modifier
                         .size(width = 92.dp, height = 76.dp)
@@ -295,7 +295,6 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                     }
                 }
 
-                // Info Column
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         fileName,
@@ -314,6 +313,16 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                         Icon(Icons.Rounded.CalendarMonth, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
                         Text(
                             DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(record.timestamp)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Rounded.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+                        Text(
+                            formatDisplayLocation(record.filePath, record.mode, record.title),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
@@ -416,8 +425,10 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Action Button (Play / Resume / Retry)
                     if (record.status == DownloadStatus.COMPLETE && record.filePath != null) {
+                        val isMedia = record.mode == MediaMode.VIDEO || record.mode == MediaMode.AUDIO || isVideoRecord(record) || isAudioRecord(record)
+                        val btnText = if (isMedia) stringResource(R.string.play_action) else "Open"
+                        val btnIcon = if (isMedia) Icons.Rounded.PlayArrow else Icons.AutoMirrored.Rounded.OpenInNew
                         Button(
                             onClick = { playMedia(context, record.filePath, audio) },
                             modifier = Modifier.weight(1f),
@@ -425,9 +436,9 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF22C55E)),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
                         ) {
-                            Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(20.dp))
+                            Icon(btnIcon, null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(5.dp))
-                            Text(stringResource(R.string.play_action), maxLines = 1)
+                            Text(btnText, maxLines = 1, fontWeight = FontWeight.Bold)
                         }
                     } else if (record.status == DownloadStatus.FAILED || record.status == DownloadStatus.PAUSED) {
                         Button(
@@ -446,7 +457,6 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                         }
                     }
 
-                    // Remove Button beside Play/Resume button
                     OutlinedButton(
                         onClick = { showDeleteDialog = true },
                         shape = RoundedCornerShape(50),
@@ -460,7 +470,6 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
         }
     }
 
-    // Remove Confirmation Dialog with Storage Delete Checkbox
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -525,28 +534,54 @@ private fun resolveMediaDetails(context: Context, path: String?, record: Downloa
     var size = "—"
     var mime = ext.uppercase(Locale.ROOT)
 
-    if (!path.isNullOrBlank()) {
-        val file = File(path)
-        if (file.exists() && file.isFile) {
-            size = formatSize(file.length())
+    val targetFile = if (!path.isNullOrBlank()) {
+        if (path.startsWith("/")) {
+            File(path)
+        } else {
+            val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+            File(downloadsDir, path.removePrefix("Download/").removePrefix("Downloads/"))
         }
+    } else null
 
-        // 1. Try Image thumbnail
+    if (targetFile != null && targetFile.exists() && targetFile.isFile && targetFile.length() > 0) {
+        size = formatSize(targetFile.length())
+    } else if (!path.isNullOrBlank()) {
+        val name = path.substringAfterLast('/')
+        val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        runCatching {
+            val projection = arrayOf(MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.MIME_TYPE)
+            val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
+            context.contentResolver.query(collection, projection, selection, arrayOf(name), null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val mediaSize = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE))
+                    if (mediaSize > 0) size = formatSize(mediaSize)
+                    val mediaMime = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE))
+                    if (!mediaMime.isNullOrBlank()) mime = mediaMime.substringAfter('/').uppercase(Locale.ROOT)
+                }
+            }
+        }
+    }
+
+    if (size == "—") {
+        val extracted = downloadTotalSize(record.detail)
+        if (!extracted.isNullOrBlank()) size = extracted
+    }
+
+    if (targetFile != null && targetFile.exists()) {
+        val realPath = targetFile.absolutePath
+
         if (ext in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")) {
             artwork = runCatching {
                 val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 }
-                android.graphics.BitmapFactory.decodeFile(path, opts)
+                android.graphics.BitmapFactory.decodeFile(realPath, opts)
             }.getOrNull()
         }
 
-        // 2. Try Video Frame via MediaMetadataRetriever
         if (artwork == null && (record.mode == MediaMode.VIDEO || ext in setOf("mp4", "mkv", "webm", "avi", "mov", "flv", "3gp", "m4v"))) {
             artwork = runCatching {
                 val retriever = MediaMetadataRetriever()
                 try {
-                    val uri = findMediaUri(context, path, false)
-                    if (uri != null) retriever.setDataSource(context, uri)
-                    else retriever.setDataSource(path)
+                    retriever.setDataSource(realPath)
                     retriever.getFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                 } finally {
                     runCatching { retriever.release() }
@@ -554,14 +589,11 @@ private fun resolveMediaDetails(context: Context, path: String?, record: Downloa
             }.getOrNull()
         }
 
-        // 3. Try Audio Embedded Picture
         if (artwork == null && (record.mode == MediaMode.AUDIO || ext in setOf("mp3", "m4a", "wav", "flac", "aac", "ogg", "opus"))) {
             artwork = runCatching {
                 val retriever = MediaMetadataRetriever()
                 try {
-                    val uri = findMediaUri(context, path, true)
-                    if (uri != null) retriever.setDataSource(context, uri)
-                    else retriever.setDataSource(path)
+                    retriever.setDataSource(realPath)
                     val bytes = retriever.embeddedPicture
                     if (bytes != null) android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) else null
                 } finally {
@@ -589,6 +621,21 @@ private fun resolveMediaDetails(context: Context, path: String?, record: Downloa
         icon = icon,
         iconTint = iconTint
     )
+}
+
+private fun formatDisplayLocation(filePath: String?, mode: MediaMode, title: String): String {
+    if (!filePath.isNullOrBlank()) {
+        val clean = filePath.replace('\\', '/')
+        if (clean.contains("Download/")) {
+            return "Downloads/" + clean.substringAfter("Download/").substringBeforeLast('/')
+        }
+        if (clean.contains("Downloads/")) {
+            return "Downloads/" + clean.substringAfter("Downloads/").substringBeforeLast('/')
+        }
+    }
+    val ext = filePath.orEmpty().substringAfterLast('.', "").ifBlank { title.substringAfterLast('.', "").lowercase(Locale.ROOT) }
+    val catInfo = resolveFileCategory(ext, "", mode)
+    return catInfo.folderPath
 }
 
 private fun formatSize(bytes: Long): String = when {

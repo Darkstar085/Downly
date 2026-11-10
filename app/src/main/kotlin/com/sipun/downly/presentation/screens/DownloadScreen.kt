@@ -56,7 +56,6 @@ fun DownloadScreen(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- SECTION 1: LINK INPUT CARD ---
         item {
             Card(
                 modifier = Modifier.fillMaxWidth().animateContentSize(),
@@ -68,7 +67,6 @@ fun DownloadScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Card Header Row: Icon + Title/Subtitle + Paste Icon
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -120,7 +118,8 @@ fun DownloadScreen(
                         }
                     }
 
-                    // Link Input Text Field
+                    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+
                     OutlinedTextField(
                         value = state.url,
                         onValueChange = vm::setUrl,
@@ -143,12 +142,19 @@ fun DownloadScreen(
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface
                         ),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                        keyboardActions = KeyboardActions(onGo = { vm.fetchInfo() })
+                        keyboardActions = KeyboardActions(onGo = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                            vm.fetchInfo()
+                        })
                     )
 
-                    // Fetch Button
                     Button(
-                        onClick = vm::fetchInfo,
+                        onClick = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+                            vm.fetchInfo()
+                        },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         enabled = !state.busy && state.url.isNotBlank(),
                         shape = RoundedCornerShape(14.dp),
@@ -166,7 +172,8 @@ fun DownloadScreen(
                                 strokeWidth = 2.5.dp
                             )
                             Spacer(Modifier.width(10.dp))
-                            Text("Fetching...", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            val btnText = if (!state.initialized) "Installing libraries..." else "Fetching..."
+                            Text(btnText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         } else {
                             Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
@@ -174,10 +181,14 @@ fun DownloadScreen(
                         }
                     }
 
-                    // Screen 2 Subtext when Fetching
                     if (state.busy) {
+                        val subText = if (!state.initialized) {
+                            state.message.ifBlank { "Setting up YouTube-DL & FFmpeg for the first time. Please wait..." }
+                        } else {
+                            "Analyzing link and getting download options..."
+                        }
                         Text(
-                            "Analyzing link and getting download options...",
+                            subText,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -188,28 +199,24 @@ fun DownloadScreen(
             }
         }
 
-        // --- SECTION 2: HOME DEFAULT INFO CHIPS (Screen 1) ---
         if (state.preview == null && !state.busy) {
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Card 1: Videos
                     InfoCard(
                         icon = Icons.Rounded.PlayArrow,
                         title = "Videos",
                         subtitle = "YouTube & more",
                         modifier = Modifier.weight(1f)
                     )
-                    // Card 2: Files
                     InfoCard(
                         icon = Icons.AutoMirrored.Rounded.InsertDriveFile,
                         title = "Files",
                         subtitle = "ZIP, APK, PDF...",
                         modifier = Modifier.weight(1f)
                     )
-                    // Card 3: Images
                     InfoCard(
                         icon = Icons.Rounded.Image,
                         title = "Images",
@@ -220,11 +227,9 @@ fun DownloadScreen(
             }
         }
 
-        // --- SECTION 3A: RESULT SUPPORTED BY YT-DLP (Screen 3A) ---
         if (state.preview != null && !state.preview.isDirectFile) {
             val preview = state.preview
 
-            // 1. Media Preview Card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -237,7 +242,6 @@ fun DownloadScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Thumbnail Box with Duration Badge
                         Box(
                             modifier = Modifier
                                 .size(width = 110.dp, height = 74.dp)
@@ -280,7 +284,6 @@ fun DownloadScreen(
                             }
                         }
 
-                        // Right Column Details
                         Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -326,7 +329,6 @@ fun DownloadScreen(
                 }
             }
 
-            // 2. Download As Section
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -339,7 +341,6 @@ fun DownloadScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Video Toggle Card
                         val isVideo = state.mode == MediaMode.VIDEO
                         Surface(
                             onClick = { vm.setMode(MediaMode.VIDEO) },
@@ -381,7 +382,6 @@ fun DownloadScreen(
                             }
                         }
 
-                        // Audio Toggle Card
                         val isAudio = state.mode == MediaMode.AUDIO
                         Surface(
                             onClick = { vm.setMode(MediaMode.AUDIO) },
@@ -427,7 +427,6 @@ fun DownloadScreen(
                 }
             }
 
-            // 3. Quality Selector Section
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -499,7 +498,6 @@ fun DownloadScreen(
                 }
             }
 
-            // 4. Advanced Options Accordion
             item {
                 Surface(
                     onClick = { vm.setAdvancedExpanded(!state.advancedExpanded) },
@@ -538,7 +536,6 @@ fun DownloadScreen(
                 }
             }
 
-            // 5. Big Green Download Button
             item {
                 Button(
                     onClick = vm::startBestDownload,
@@ -553,11 +550,9 @@ fun DownloadScreen(
             }
         }
 
-        // --- SECTION 3B: RESULT DIRECT FILE (Screen 3B) ---
         if (state.preview != null && state.preview.isDirectFile) {
             val preview = state.preview
 
-            // 1. File Preview Card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -570,7 +565,6 @@ fun DownloadScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // File Icon inside dark/grey box
                         Box(
                             modifier = Modifier
                                 .size(60.dp)
@@ -634,7 +628,6 @@ fun DownloadScreen(
                 }
             }
 
-            // 2. Download To Section
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -672,7 +665,6 @@ fun DownloadScreen(
                 }
             }
 
-            // 3. File Name Section
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -701,7 +693,6 @@ fun DownloadScreen(
                 }
             }
 
-            // 4. Advanced Options Accordion
             item {
                 Surface(
                     onClick = { vm.setAdvancedExpanded(!state.advancedExpanded) },
@@ -740,7 +731,6 @@ fun DownloadScreen(
                 }
             }
 
-            // 5. Big Green Download Button
             item {
                 Button(
                     onClick = vm::startBestDownload,
