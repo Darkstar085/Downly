@@ -3,21 +3,19 @@ package com.sipun.downly.presentation.screens
 import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
-import android.os.Build
-import android.util.Size
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
-import java.io.File
-import java.util.Locale
+import android.util.Size
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,42 +28,38 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.VideoFile
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.VideoFile
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Shapes
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,10 +67,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.colorResource
-import com.sipun.downly.R
-import com.sipun.downly.presentation.theme.DownlyTheme
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -84,16 +76,20 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.sipun.downly.R
 import com.sipun.downly.data.MediaMode
-import com.sipun.downly.ui.update.UpdateContent
 import com.sipun.downly.presentation.DownlyViewModel
+import com.sipun.downly.presentation.theme.DownlyTheme
 import com.sipun.downly.presentation.theme.DownlyUiShapes
 import com.sipun.downly.presentation.theme.downlyCardBorder
+import com.sipun.downly.ui.update.UpdateContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.text.DateFormat
 import java.util.Date
+import java.util.Locale
 
 private data class ExistingMediaDetails(
     val name: String,
@@ -103,7 +99,11 @@ private data class ExistingMediaDetails(
     val durationMillis: Long?
 )
 
-private fun loadExistingMediaDetails(context: Context, uriString: String, fallbackName: String): ExistingMediaDetails {
+private fun loadExistingMediaDetails(
+    context: Context,
+    uriString: String,
+    fallbackName: String
+): ExistingMediaDetails {
     val uri = runCatching { Uri.parse(uriString) }.getOrNull()
     if (uri != null && uri.scheme == "file") {
         val file = File(uri.path.orEmpty())
@@ -133,10 +133,12 @@ private fun loadExistingMediaDetails(context: Context, uriString: String, fallba
                     val index = cursor.getColumnIndex(column)
                     return if (index >= 0 && !cursor.isNull(index)) cursor.getLong(index) else null
                 }
+
                 val nameIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
                 val mimeIndex = cursor.getColumnIndex(MediaStore.MediaColumns.MIME_TYPE)
                 ExistingMediaDetails(
-                    name = if (nameIndex >= 0) cursor.getString(nameIndex) ?: fallbackName else fallbackName,
+                    name = if (nameIndex >= 0) cursor.getString(nameIndex)
+                        ?: fallbackName else fallbackName,
                     mimeType = if (mimeIndex >= 0) cursor.getString(mimeIndex).orEmpty() else "",
                     sizeBytes = longValue(MediaStore.MediaColumns.SIZE),
                     modifiedMillis = longValue(MediaStore.MediaColumns.DATE_MODIFIED)?.let { if (it < 10_000_000_000L) it * 1000 else it },
@@ -171,10 +173,10 @@ private fun formatFileSize(bytes: Long?): String {
     if (bytes == null || bytes < 0L) return "Unknown"
     if (bytes < 1024L) return "$bytes B"
     val kb = bytes / 1024.0
-    if (kb < 1024.0) return String.format(java.util.Locale.getDefault(), "%.1f KB", kb)
+    if (kb < 1024.0) return String.format(Locale.getDefault(), "%.1f KB", kb)
     val mb = kb / 1024.0
-    if (mb < 1024.0) return String.format(java.util.Locale.getDefault(), "%.1f MB", mb)
-    return String.format(java.util.Locale.getDefault(), "%.2f GB", mb / 1024.0)
+    if (mb < 1024.0) return String.format(Locale.getDefault(), "%.1f MB", mb)
+    return String.format(Locale.getDefault(), "%.2f GB", mb / 1024.0)
 }
 
 private fun formatMediaDuration(milliseconds: Long?): String? {
@@ -210,7 +212,10 @@ fun DownlyApp(
     LaunchedEffect(state.initialized) {
         if (state.initialized) {
             delay(4500)
-            if (state.duplicatePrompt == null && !com.sipun.downly.utils.isIgnoringBatteryOptimizations(context)) {
+            if (state.duplicatePrompt == null && !com.sipun.downly.utils.isIgnoringBatteryOptimizations(
+                    context
+                )
+            ) {
                 showBatteryPrompt = true
             }
         }
@@ -230,7 +235,10 @@ fun DownlyApp(
     if (!view.isInEditMode) {
         val window = (view.context as android.app.Activity).window
         androidx.compose.runtime.SideEffect {
-            androidx.core.view.WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            androidx.core.view.WindowCompat.getInsetsController(
+                window,
+                view
+            ).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
@@ -279,17 +287,26 @@ fun DownlyApp(
                     actions = {
                         if (state.tab == 0) {
                             IconButton(onClick = { vm.setTab(1) }) {
-                                Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.download_history))
+                                Icon(
+                                    Icons.Rounded.History,
+                                    contentDescription = stringResource(R.string.download_history)
+                                )
                             }
                             IconButton(onClick = { vm.setTab(2) }) {
-                                Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings_title))
+                                Icon(
+                                    Icons.Rounded.Settings,
+                                    contentDescription = stringResource(R.string.settings_title)
+                                )
                             }
                         } else if (state.tab == 1) {
                             IconButton(onClick = { vm.setIsSearchActive(!state.isSearchActive) }) {
                                 Icon(Icons.Rounded.Search, contentDescription = "Search")
                             }
                             IconButton(onClick = { vm.setTab(2) }) {
-                                Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings_title))
+                                Icon(
+                                    Icons.Rounded.Settings,
+                                    contentDescription = stringResource(R.string.settings_title)
+                                )
                             }
                         }
                     },
@@ -309,7 +326,11 @@ fun DownlyApp(
                 when (tab) {
                     0 -> DownloadScreen(state, vm, Modifier.padding(padding))
                     1 -> ActivityScreen(state, vm, Modifier.padding(padding))
-                    else -> SettingsScreen(state, vm, Modifier.padding(padding), onCheckForUpdates = { requestAnotherUpdateCheck = true })
+                    else -> SettingsScreen(
+                        state,
+                        vm,
+                        Modifier.padding(padding),
+                        onCheckForUpdates = { requestAnotherUpdateCheck = true })
                 }
             }
         }
@@ -359,7 +380,11 @@ fun DownlyApp(
             }
             val isAudio = prompt.mode == MediaMode.AUDIO
             val duration = formatMediaDuration(details.durationMillis)
-            val videoThumbnail by produceState<Bitmap?>(initialValue = null, prompt.existingUri, isAudio) {
+            val videoThumbnail by produceState<Bitmap?>(
+                initialValue = null,
+                prompt.existingUri,
+                isAudio
+            ) {
                 value = if (isAudio) null else withContext(Dispatchers.IO) {
                     loadExistingVideoThumbnail(context, prompt.existingUri)
                 }
@@ -371,7 +396,9 @@ fun DownlyApp(
                 properties = DialogProperties(usePlatformDefaultWidth = false)
             ) {
                 Surface(
-                    modifier = Modifier.fillMaxWidth(0.94f).widthIn(max = 560.dp),
+                    modifier = Modifier
+                        .fillMaxWidth(0.94f)
+                        .widthIn(max = 560.dp),
                     shape = DownlyUiShapes.dialog,
                     color = MaterialTheme.colorScheme.surface,
                     border = downlyCardBorder(),
@@ -379,12 +406,16 @@ fun DownlyApp(
                     shadowElevation = 18.dp
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
-                                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
                                     .background(Color(0xFF22C55E).copy(alpha = 0.18f)),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -396,8 +427,15 @@ fun DownlyApp(
                                 )
                             }
                             Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(stringResource(R.string.file_already_exists), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Column(
+                                Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    stringResource(R.string.file_already_exists),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 Text(
                                     "A file with this name is already in your library.",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -411,19 +449,32 @@ fun DownlyApp(
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                             border = downlyCardBorder()
                         ) {
-                            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (isAudio) {
                                         Box(
-                                            Modifier.size(80.dp).clip(RoundedCornerShape(14.dp))
+                                            Modifier
+                                                .size(80.dp)
+                                                .clip(RoundedCornerShape(14.dp))
                                                 .background(Color(0xFFEEDFFF)),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(Icons.Rounded.MusicNote, contentDescription = stringResource(R.string.audio_file), tint = colorResource(R.color.downly_audio_accent), modifier = Modifier.size(34.dp))
+                                            Icon(
+                                                Icons.Rounded.MusicNote,
+                                                contentDescription = stringResource(R.string.audio_file),
+                                                tint = colorResource(R.color.downly_audio_accent),
+                                                modifier = Modifier.size(34.dp)
+                                            )
                                         }
                                     } else {
                                         Box(
-                                            modifier = Modifier.size(width = 104.dp, height = 80.dp)
+                                            modifier = Modifier
+                                                .size(width = 104.dp, height = 80.dp)
                                                 .clip(RoundedCornerShape(14.dp))
                                                 .background(MaterialTheme.colorScheme.surfaceContainer),
                                             contentAlignment = Alignment.Center
@@ -446,7 +497,10 @@ fun DownlyApp(
                                         }
                                     }
                                     Spacer(Modifier.width(12.dp))
-                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Column(
+                                        Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
                                         Text(
                                             details.name,
                                             style = MaterialTheme.typography.titleSmall,
@@ -454,7 +508,10 @@ fun DownlyApp(
                                             maxLines = 3,
                                             overflow = TextOverflow.Ellipsis
                                         )
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
                                             Icon(
                                                 Icons.Rounded.Folder,
                                                 contentDescription = stringResource(R.string.download_folder),
@@ -469,18 +526,45 @@ fun DownlyApp(
                                             )
                                         }
                                         if (!isAudio && duration != null) {
-                                            Text(duration, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                                            Text(
+                                                duration,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
                                         }
                                     }
                                 }
-                                Surface(shape = DownlyUiShapes.nestedCard, color = MaterialTheme.colorScheme.surfaceContainer, border = downlyCardBorder()) {
-                                    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                        DetailRow(Icons.AutoMirrored.Rounded.InsertDriveFile, "File type", if (isAudio) "MP3 (Audio)" else details.mimeType.substringAfter('/').uppercase().ifBlank { "Video" })
-                                        DetailRow(Icons.Rounded.Storage, "File size", formatFileSize(details.sizeBytes))
+                                Surface(
+                                    shape = DownlyUiShapes.nestedCard,
+                                    color = MaterialTheme.colorScheme.surfaceContainer,
+                                    border = downlyCardBorder()
+                                ) {
+                                    Column(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalArrangement = Arrangement.spacedBy(9.dp)
+                                    ) {
+                                        DetailRow(
+                                            Icons.AutoMirrored.Rounded.InsertDriveFile,
+                                            "File type",
+                                            if (isAudio) "MP3 (Audio)" else details.mimeType.substringAfter(
+                                                '/'
+                                            ).uppercase().ifBlank { "Video" })
+                                        DetailRow(
+                                            Icons.Rounded.Storage,
+                                            "File size",
+                                            formatFileSize(details.sizeBytes)
+                                        )
                                         DetailRow(
                                             Icons.Rounded.CalendarMonth,
                                             "Last modified",
-                                            details.modifiedMillis?.let { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it)) } ?: "Unknown"
+                                            details.modifiedMillis?.let {
+                                                DateFormat.getDateTimeInstance(
+                                                    DateFormat.MEDIUM,
+                                                    DateFormat.SHORT
+                                                ).format(Date(it))
+                                            } ?: "Unknown"
                                         )
                                     }
                                 }
@@ -515,20 +599,38 @@ fun DownlyApp(
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(50),
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 13.dp)
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                    horizontal = 8.dp,
+                                    vertical = 13.dp
+                                )
                             ) {
-                                Text(stringResource(R.string.keep_existing), maxLines = 1, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    stringResource(R.string.keep_existing),
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                             Button(
                                 onClick = { vm.resolveDuplicate(replaceExisting = true) },
                                 modifier = Modifier.weight(1.12f),
                                 shape = RoundedCornerShape(50),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 13.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                    horizontal = 8.dp,
+                                    vertical = 13.dp
+                                ),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
-                                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Rounded.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.replace_download), maxLines = 1, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    stringResource(R.string.replace_download),
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
                     }
@@ -541,8 +643,27 @@ fun DownlyApp(
 @Composable
 private fun DetailRow(icon: ImageVector, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(28.dp).size(20.dp))
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        Text(value, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .width(28.dp)
+                .size(20.dp)
+        )
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            value,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

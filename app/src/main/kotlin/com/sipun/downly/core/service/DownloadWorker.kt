@@ -9,29 +9,28 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.sipun.downly.core.notification.DownloadNotificationHelper
 import com.sipun.downly.data.DownloadRecord
 import com.sipun.downly.data.MediaMode
 import com.sipun.downly.presentation.DownlyViewModel
-import com.sipun.downly.core.notification.DownloadNotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArraySet
 
 private const val ID_KEY = "download_id"
 private const val URL_KEY = "download_url"
 private const val TITLE_KEY = "download_title"
 private const val MODE_KEY = "download_mode"
 private const val QUALITY_KEY = "download_quality"
-private const val CONNECTION_KEY = "download_connection"
 
 object DownloadWorkManager {
     private val completionListeners = CopyOnWriteArraySet<(String) -> Unit>()
     private val progressListeners = CopyOnWriteArraySet<(Int, Int, String) -> Unit>()
     private val pauseRequests = ConcurrentHashMap.newKeySet<String>()
 
-    fun enqueue(context: Context, record: DownloadRecord, connectionType: String) {
+    fun enqueue(context: Context, record: DownloadRecord) {
         val request = OneTimeWorkRequestBuilder<DownloadWorker>()
             .setInputData(
                 workDataOf(
@@ -40,7 +39,6 @@ object DownloadWorkManager {
                     TITLE_KEY to record.title,
                     MODE_KEY to record.mode.name,
                     QUALITY_KEY to record.quality,
-                    CONNECTION_KEY to connectionType
                 )
             )
             .addTag("downly-download")
@@ -104,8 +102,9 @@ class DownloadWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val id = inputData.getString(ID_KEY) ?: return@withContext Result.failure()
-        val mode = inputData.getString(MODE_KEY)?.let { runCatching { MediaMode.valueOf(it) }.getOrNull() }
-            ?: return@withContext Result.failure()
+        val mode =
+            inputData.getString(MODE_KEY)?.let { runCatching { MediaMode.valueOf(it) }.getOrNull() }
+                ?: return@withContext Result.failure()
         val record = DownloadRecord(
             id = id,
             url = inputData.getString(URL_KEY).orEmpty(),
@@ -120,21 +119,16 @@ class DownloadWorker(
 
         val viewModel = DownlyViewModel()
         viewModel.attach(applicationContext, observeDownloadCompletion = false)
-        var initialized = false
-        repeat(120) {
-            if (viewModel.state.value.initialized) {
-                initialized = true
-                return@repeat
-            }
+        var attempts = 0
+        while (!viewModel.state.value.initialized && attempts++ < 120) {
             delay(500)
         }
-        if (!initialized) return@withContext Result.retry()
+        if (!viewModel.state.value.initialized) return@withContext Result.retry()
 
         viewModel.executeDownloadFromWorker(
             record,
             mode,
-            record.quality,
-            inputData.getString(CONNECTION_KEY).orEmpty()
+            record.quality
         )
         viewModel.flushHistoryForWorker(id)
         DownloadWorkManager.notifyFinished(id)

@@ -11,11 +11,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
+import com.sipun.downly.core.notification.DownloadNotificationHelper
 import com.sipun.downly.core.update.UpdateManager
 import com.sipun.downly.core.update.UpdateNotificationHelper
-import com.sipun.downly.core.notification.DownloadNotificationHelper
 import com.sipun.downly.presentation.screens.DownlyApp
-import com.sipun.downly.utils.DownlyContextRef
 
 class MainActivity : ComponentActivity() {
     private val checkUpdatesRequested = mutableStateOf(false)
@@ -30,7 +29,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        DownlyContextRef.context = applicationContext
         UpdateNotificationHelper.createChannel(applicationContext)
         handleUpdateIntent(intent)
         handleDownloadIntent(intent)

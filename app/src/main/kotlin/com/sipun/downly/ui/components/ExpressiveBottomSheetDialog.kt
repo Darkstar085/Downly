@@ -2,10 +2,25 @@ package com.sipun.downly.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,11 +59,19 @@ fun ExpressiveBottomSheetDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 560.dp),
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp, bottomStart = 28.dp, bottomEnd = 28.dp),
+                shape = RoundedCornerShape(
+                    topStart = 32.dp,
+                    topEnd = 32.dp,
+                    bottomStart = 28.dp,
+                    bottomEnd = 28.dp
+                ),
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                 tonalElevation = 0.dp,
                 shadowElevation = 24.dp,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
             ) {
                 Column(
                     modifier = Modifier
@@ -113,7 +136,10 @@ fun ExpressiveBottomSheetDialog(
                                 .weight(1f)
                                 .height(54.dp),
                             shape = RoundedCornerShape(27.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                            )
                         ) {
                             Text(
                                 dismissText,

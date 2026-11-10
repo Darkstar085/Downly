@@ -25,6 +25,7 @@ data class QualityOption(
     val formatSelector: String = "",
     val sizeIsApproximate: Boolean = true
 )
+
 data class AudioOption(
     val formatId: String,
     val quality: String,
@@ -32,6 +33,7 @@ data class AudioOption(
     val estimatedBytes: Long?,
     val sizeIsApproximate: Boolean = true
 )
+
 data class MediaOptions(
     val qualityOptions: List<QualityOption>,
     val audioOptions: List<AudioOption>
@@ -103,7 +105,6 @@ data class ScreenState(
     val qualityDropdownExpanded: Boolean = false,
     val historySearchQuery: String = "",
     val isSearchActive: Boolean = false,
-    val historyFilter: String = "ALL",
     val downloadSettings: DownloadSettings = DownloadSettings()
 )
 

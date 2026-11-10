@@ -1,8 +1,10 @@
 package com.sipun.downly
 
 import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.Assert.*
 import java.io.File
 
 /**
@@ -19,7 +21,10 @@ class ExampleUnitTest {
     @Test
     fun testLottieJsonFiles() {
         val downloadFile = File("src/main/res/raw/about_download.json")
-        assertTrue("about_download.json should exist: ${downloadFile.absolutePath}", downloadFile.exists())
+        assertTrue(
+            "about_download.json should exist: ${downloadFile.absolutePath}",
+            downloadFile.exists()
+        )
         val downloadJson = downloadFile.readText()
         assertNotNull(JSONObject(downloadJson))
 

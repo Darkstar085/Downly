@@ -6,23 +6,17 @@ import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
 import com.sipun.downly.data.AudioOption
-import com.sipun.downly.data.MediaOptions
 import com.sipun.downly.data.MediaMode
+import com.sipun.downly.data.MediaOptions
 import com.sipun.downly.data.QualityOption
 import com.sipun.youtubedl_android.mapper.VideoFormat
-import java.util.Locale
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 private val COMMON_AUDIO_BITRATES = listOf(320, 256, 192, 160, 128, 96, 64, 48, 32)
-
-fun commonVideoResolution(width: Int, height: Int): Int? {
-    if (height <= 0) return null
-    val effectiveResolution = minOf(width.takeIf { it > 0 } ?: height, height)
-    return effectiveResolution.takeIf { it >= 240 }
-}
 
 private val GENERIC_VIDEO_QUALITIES = listOf(4320, 2160, 1440, 1080, 720, 480, 360, 240, 144)
 
@@ -33,7 +27,7 @@ fun genericVideoQualityHeights(availableHeights: List<Int>): List<Int> {
     val usableHeights = availableHeights.filter { it >= 144 }
     val maximumHeight = usableHeights.maxOrNull() ?: return emptyList()
     val choices = GENERIC_VIDEO_QUALITIES.filter { it <= maximumHeight } +
-        listOfNotNull(maximumHeight.takeIf { it !in GENERIC_VIDEO_QUALITIES })
+            listOfNotNull(maximumHeight.takeIf { it !in GENERIC_VIDEO_QUALITIES })
     return choices.distinct()
         .filter { cap -> usableHeights.any { it <= cap } }
         .sortedDescending()
@@ -60,7 +54,8 @@ fun mediaIdentityKey(mediaId: String, mode: MediaMode, quality: String): String 
 fun downloadFilenameQuality(mode: MediaMode, quality: String): String {
     if (mode == MediaMode.AUDIO) {
         val formatId = quality.removePrefix("audio:").takeIf { it.isNotBlank() } ?: "audio"
-        return "audio-" + formatId.lowercase().replace(Regex("[^a-z0-9-]+"), "-").trim('-').ifBlank { "audio" }
+        return "audio-" + formatId.lowercase().replace(Regex("[^a-z0-9-]+"), "-").trim('-')
+            .ifBlank { "audio" }
     }
     val height = Regex("""height\s*<=\s*(\d+)""").find(quality)?.groupValues?.get(1)
         ?: quality.removePrefix("video:").removeSuffix("p").toIntOrNull()?.toString()
@@ -128,10 +123,12 @@ internal fun estimateFormatBytes(
 }
 
 private fun probeRemoteFileSize(format: VideoFormat): Long? {
-    val rawUrl = format.url?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return null
+    val rawUrl =
+        format.url?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return null
     val urlPath = runCatching { URL(rawUrl).path.lowercase() }.getOrNull().orEmpty()
     if (format.manifestUrl != null || format.ext?.lowercase() in setOf("m3u8", "mpd") ||
-        urlPath.endsWith(".m3u8") || urlPath.endsWith(".mpd")) return null
+        urlPath.endsWith(".m3u8") || urlPath.endsWith(".mpd")
+    ) return null
 
     fun connection(method: String): HttpURLConnection? = runCatching {
         (URL(rawUrl).openConnection() as HttpURLConnection).apply {
@@ -139,7 +136,8 @@ private fun probeRemoteFileSize(format: VideoFormat): Long? {
             instanceFollowRedirects = true
             connectTimeout = 700
             readTimeout = 700
-            format.httpHeaders.orEmpty().forEach { (name, value) -> setRequestProperty(name, value) }
+            format.httpHeaders.orEmpty()
+                .forEach { (name, value) -> setRequestProperty(name, value) }
             if (method == "GET") setRequestProperty("Range", "bytes=0-0")
         }
     }.getOrNull()
@@ -160,6 +158,7 @@ private fun probeRemoteFileSize(format: VideoFormat): Long? {
                     rangeTotal != null && rangeTotal > 0L -> rangeTotal
                     code == HttpURLConnection.HTTP_OK ->
                         response.getHeaderFieldLong("Content-Length", -1L).takeIf { it > 0L }
+
                     else -> null
                 }
             }
@@ -171,7 +170,10 @@ private fun probeRemoteFileSize(format: VideoFormat): Long? {
     return readLength("HEAD") ?: readLength("GET")
 }
 
-private fun resolveFormatSizes(formats: List<VideoFormat>, durationSeconds: Int): Map<String, ResolvedFormatSize> {
+private fun resolveFormatSizes(
+    formats: List<VideoFormat>,
+    durationSeconds: Int
+): Map<String, ResolvedFormatSize> {
     val identified = formats.mapNotNull { format ->
         format.formatId?.takeIf { it.isNotBlank() }?.let { it to format }
     }.distinctBy { it.first }
@@ -189,12 +191,16 @@ private fun resolveFormatSizes(formats: List<VideoFormat>, durationSeconds: Int)
     }.toMutableMap()
     val needsProbe = identified.filter { (_, format) ->
         format.fileSize <= 0L && format.fileSizeApproximate <= 0L &&
-            format.url?.startsWith("http") == true
+                format.url?.startsWith("http") == true
     }
     if (needsProbe.isNotEmpty()) {
         val executor = Executors.newFixedThreadPool(minOf(4, needsProbe.size))
         try {
-            val pending = needsProbe.map { (id, format) -> id to executor.submit<Long?> { probeRemoteFileSize(format) } }
+            val pending = needsProbe.map { (id, format) ->
+                id to executor.submit<Long?> {
+                    probeRemoteFileSize(format)
+                }
+            }
             val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1800)
             pending.forEach { (id, future) ->
                 val remaining = deadline - System.nanoTime()
@@ -242,13 +248,15 @@ private fun resolveFormatSizes(formats: List<VideoFormat>, durationSeconds: Int)
 fun buildMediaOptions(formats: List<VideoFormat>, durationSeconds: Int = 0): MediaOptions {
     val sizes = resolveFormatSizes(formats, durationSeconds)
     val videoFormats = formats.filter { it.height > 0 && it.vcodec?.lowercase() != "none" }
-    val audioFormats = formats.filter { it.vcodec?.lowercase() == "none" && it.acodec?.lowercase() != "none" }
+    val audioFormats =
+        formats.filter { it.vcodec?.lowercase() == "none" && it.acodec?.lowercase() != "none" }
     val bestAudio = audioFormats.maxWithOrNull(
         compareBy<VideoFormat> { it.abr.takeIf { bitrate -> bitrate > 0 } ?: it.tbr }
             .thenBy { it.fileSize.takeIf { size -> size > 0L } ?: it.fileSizeApproximate }
     )
     val bestAudioSize = bestAudio?.formatId?.let { sizes[it] }
-    val bestAudioBitrate = bestAudio?.let { (it.abr.takeIf { bitrate -> bitrate > 0 } ?: it.tbr).toDouble() } ?: 0.0
+    val bestAudioBitrate =
+        bestAudio?.let { (it.abr.takeIf { bitrate -> bitrate > 0 } ?: it.tbr).toDouble() } ?: 0.0
     val bestAudioBytes = bestAudioSize?.bytes ?: 0L
 
     val videoCandidates = videoFormats.mapNotNull { format ->
@@ -258,33 +266,35 @@ fun buildMediaOptions(formats: List<VideoFormat>, durationSeconds: Int = 0): Med
         Triple(format, resolution, sizes[formatId])
     }
 
-    val qualityOptions = genericVideoQualityHeights(videoCandidates.map { it.second }).mapNotNull { maxHeight ->
-        val selected = videoCandidates
-            .filter { it.second <= maxHeight }
-            .maxWithOrNull(
-                compareBy<Triple<VideoFormat, Int, ResolvedFormatSize?>> { it.second }
-                    .thenBy { vcodecRank(it.first.vcodec) }
-                    .thenBy { fpsRank(it.first.fps) }
-                    .thenBy { it.third?.bytes ?: 0L }
-                    .thenBy { it.first.tbr }
-            ) ?: return@mapNotNull null
-        val format = selected.first
-        val isVideoOnly = format.acodec?.lowercase() == "none"
-        val videoBytes = estimateFormatBytes(selected.third, format.tbr.toDouble(), durationSeconds)
-        val audioBytes = estimateFormatBytes(bestAudioSize, bestAudioBitrate, durationSeconds)
-            ?: bestAudioBytes.takeIf { it > 0L }
-        val totalBytes = if (isVideoOnly) {
-            listOfNotNull(videoBytes, audioBytes).takeIf { it.isNotEmpty() }?.sum()
-        } else videoBytes
+    val qualityOptions =
+        genericVideoQualityHeights(videoCandidates.map { it.second }).mapNotNull { maxHeight ->
+            val selected = videoCandidates
+                .filter { it.second <= maxHeight }
+                .maxWithOrNull(
+                    compareBy<Triple<VideoFormat, Int, ResolvedFormatSize?>> { it.second }
+                        .thenBy { vcodecRank(it.first.vcodec) }
+                        .thenBy { fpsRank(it.first.fps) }
+                        .thenBy { it.third?.bytes ?: 0L }
+                        .thenBy { it.first.tbr }
+                ) ?: return@mapNotNull null
+            val format = selected.first
+            val isVideoOnly = format.acodec?.lowercase() == "none"
+            val videoBytes =
+                estimateFormatBytes(selected.third, format.tbr.toDouble(), durationSeconds)
+            val audioBytes = estimateFormatBytes(bestAudioSize, bestAudioBitrate, durationSeconds)
+                ?: bestAudioBytes.takeIf { it > 0L }
+            val totalBytes = if (isVideoOnly) {
+                listOfNotNull(videoBytes, audioBytes).takeIf { it.isNotEmpty() }?.sum()
+            } else videoBytes
 
-        QualityOption(
-            quality = "${maxHeight}p",
-            height = maxHeight,
-            estimatedBytes = totalBytes?.takeIf { it > 0L },
-            formatSelector = genericVideoFormatSelector(maxHeight),
-            sizeIsApproximate = selected.third?.approximate == true || (isVideoOnly && bestAudioSize?.approximate == true)
-        )
-    }
+            QualityOption(
+                quality = "${maxHeight}p",
+                height = maxHeight,
+                estimatedBytes = totalBytes?.takeIf { it > 0L },
+                formatSelector = genericVideoFormatSelector(maxHeight),
+                sizeIsApproximate = selected.third?.approximate == true || (isVideoOnly && bestAudioSize?.approximate == true)
+            )
+        }
 
     val audioOptions = audioFormats.mapNotNull { format ->
         val formatId = format.formatId?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
@@ -296,7 +306,8 @@ fun buildMediaOptions(formats: List<VideoFormat>, durationSeconds: Int = 0): Med
             formatId = formatId,
             quality = "$commonBitrate kbps · $extension",
             bitrate = commonBitrate,
-            estimatedBytes = size?.bytes?.takeIf { it > 0L } ?: estimateBytesFromBitrate(bitrate.toDouble(), durationSeconds),
+            estimatedBytes = size?.bytes?.takeIf { it > 0L }
+                ?: estimateBytesFromBitrate(bitrate.toDouble(), durationSeconds),
             sizeIsApproximate = size?.approximate ?: true
         ) to bitrate
     }.groupBy { it.first.bitrate }.mapNotNull { (_, options) ->
@@ -309,12 +320,6 @@ fun buildMediaOptions(formats: List<VideoFormat>, durationSeconds: Int = 0): Med
 
     return MediaOptions(qualityOptions, audioOptions)
 }
-
-fun buildQualityOptions(formats: List<VideoFormat>, durationSeconds: Int = 0): List<QualityOption> =
-    buildMediaOptions(formats, durationSeconds).qualityOptions
-
-fun buildAudioOptions(formats: List<VideoFormat>, durationSeconds: Int = 0): List<AudioOption> =
-    buildMediaOptions(formats, durationSeconds).audioOptions
 
 fun recommendAudioOption(options: List<AudioOption>): AudioOption? =
     options.maxWithOrNull(compareBy<AudioOption> { it.bitrate }.thenBy { it.estimatedBytes ?: 0L })
@@ -331,7 +336,10 @@ fun recommendQuality(options: List<QualityOption>, connectionType: String): Stri
 }
 
 fun downloadTotalSize(detail: String): String? {
-    val match = Regex("""\bof\s+(\d+(?:\.\d+)?)\s*(B|KB|MB|GB|TB|KiB|MiB|GiB|TiB)\b""", RegexOption.IGNORE_CASE)
+    val match = Regex(
+        """\bof\s+(\d+(?:\.\d+)?)\s*(B|KB|MB|GB|TB|KiB|MiB|GiB|TiB)\b""",
+        RegexOption.IGNORE_CASE
+    )
         .find(detail) ?: return null
     val amount = match.groupValues[1]
     val unit = match.groupValues[2]
@@ -344,20 +352,10 @@ fun formatBytes(bytes: Long): String = when {
         if (gb >= 10.0) String.format(Locale.US, "%.1f GB", gb)
         else String.format(Locale.US, "%.2f GB", gb)
     }
+
     bytes >= 1_048_576L -> String.format(Locale.US, "%.1f MB", bytes / 1_048_576.0)
     bytes >= 1024L -> String.format(Locale.US, "%.0f KB", bytes / 1024.0)
     else -> "$bytes B"
-}
-
-fun appContextOpen(intent: Intent) {
-    runCatching {
-        val context = DownlyContextRef.context ?: return
-        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }
-}
-
-object DownlyContextRef {
-    var context: Context? = null
 }
 
 fun normalizeUrl(value: String): String {
@@ -370,7 +368,8 @@ fun normalizeUrl(value: String): String {
     else if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
         trimmed = "https://" + trimmed
     }
-    val knownExts = listOf(".apk", ".zip", ".pdf", ".mp4", ".mp3", ".png", ".jpg", ".jpeg", ".webp", ".md")
+    val knownExts =
+        listOf(".apk", ".zip", ".pdf", ".mp4", ".mp3", ".png", ".jpg", ".jpeg", ".webp", ".md")
     for (ext in knownExts) {
         val idx = trimmed.indexOf(ext, ignoreCase = true)
         if (idx > 0) {
@@ -387,7 +386,9 @@ fun normalizeUrl(value: String): String {
 fun isValidUrl(value: String): Boolean {
     val normalized = normalizeUrl(value)
     val uri = runCatching { Uri.parse(normalized) }.getOrNull() ?: return false
-    return uri.scheme in setOf("http", "https") && !uri.host.isNullOrBlank() && uri.host!!.contains(".")
+    return uri.scheme in setOf("http", "https") && !uri.host.isNullOrBlank() && uri.host!!.contains(
+        "."
+    )
 }
 
 fun formatDuration(seconds: Int): String {
@@ -404,14 +405,28 @@ fun friendlyError(error: Throwable): String {
     return when {
         message.isBlank() -> "Something went wrong. Check your connection and try again."
         message.contains("unsupported url", true) -> "This link is not supported by yt-dlp."
-        message.contains("private", true) || message.contains("sign in", true) -> "This media may require sign-in or may be private."
-        message.contains("network", true) || message.contains("resolve host", true) || message.contains("connection", true) -> "Network problem. Check your connection and retry."
+        message.contains("private", true) || message.contains(
+            "sign in",
+            true
+        ) -> "This media may require sign-in or may be private."
+
+        message.contains("network", true) || message.contains(
+            "resolve host",
+            true
+        ) || message.contains(
+            "connection",
+            true
+        ) -> "Network problem. Check your connection and retry."
+
         else -> message.take(220)
     }
 }
 
 fun encodeText(value: String): String =
-    android.util.Base64.encodeToString(value.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+    android.util.Base64.encodeToString(
+        value.toByteArray(Charsets.UTF_8),
+        android.util.Base64.NO_WRAP
+    )
 
 fun decodeText(value: String): String =
     String(android.util.Base64.decode(value, android.util.Base64.DEFAULT), Charsets.UTF_8)
@@ -472,37 +487,123 @@ fun resolveFileCategory(ext: String, mime: String, mode: MediaMode): FileCategor
     val cleanExt = ext.lowercase(Locale.ROOT)
     val cleanMime = mime.lowercase(Locale.ROOT)
 
-    if (mode == MediaMode.VIDEO || cleanMime.startsWith("video/") || cleanExt in setOf("mp4", "mkv", "webm", "avi", "mov", "flv", "wmv", "3gp", "m4v", "ts")) {
-        return FileCategoryInfo("Video", "Downloads/Downly/Videos", "Download/Downly/Videos/", cleanExt.uppercase(Locale.ROOT).ifBlank { "VIDEO" })
+    if (mode == MediaMode.VIDEO || cleanMime.startsWith("video/") || cleanExt in setOf(
+            "mp4",
+            "mkv",
+            "webm",
+            "avi",
+            "mov",
+            "flv",
+            "wmv",
+            "3gp",
+            "m4v",
+            "ts"
+        )
+    ) {
+        return FileCategoryInfo(
+            "Video",
+            "Downloads/Downly/Videos",
+            "Download/Downly/Videos/",
+            cleanExt.uppercase(Locale.ROOT).ifBlank { "VIDEO" })
     }
-    if (mode == MediaMode.AUDIO || cleanMime.startsWith("audio/") || cleanExt in setOf("mp3", "m4a", "wav", "flac", "aac", "ogg", "opus", "wma", "m4b")) {
-        return FileCategoryInfo("Audio", "Downloads/Downly/Music", "Download/Downly/Music/", cleanExt.uppercase(Locale.ROOT).ifBlank { "AUDIO" })
+    if (mode == MediaMode.AUDIO || cleanMime.startsWith("audio/") || cleanExt in setOf(
+            "mp3",
+            "m4a",
+            "wav",
+            "flac",
+            "aac",
+            "ogg",
+            "opus",
+            "wma",
+            "m4b"
+        )
+    ) {
+        return FileCategoryInfo(
+            "Audio",
+            "Downloads/Downly/Music",
+            "Download/Downly/Music/",
+            cleanExt.uppercase(Locale.ROOT).ifBlank { "AUDIO" })
     }
-    if (cleanMime.startsWith("image/") || cleanExt in setOf("jpg", "jpeg", "png", "webp", "gif", "svg", "bmp", "ico", "heic", "tiff")) {
-        return FileCategoryInfo("Photos", "Downloads/Downly/Photos", "Download/Downly/Photos/", cleanExt.uppercase(Locale.ROOT).ifBlank { "PHOTO" })
+    if (cleanMime.startsWith("image/") || cleanExt in setOf(
+            "jpg",
+            "jpeg",
+            "png",
+            "webp",
+            "gif",
+            "svg",
+            "bmp",
+            "ico",
+            "heic",
+            "tiff"
+        )
+    ) {
+        return FileCategoryInfo(
+            "Photos",
+            "Downloads/Downly/Photos",
+            "Download/Downly/Photos/",
+            cleanExt.uppercase(Locale.ROOT).ifBlank { "PHOTO" })
     }
-    if (cleanExt in setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "epub", "rtf") ||
-        cleanMime.contains("pdf") || cleanMime.contains("document") || cleanMime.contains("sheet") || cleanMime.contains("presentation") || cleanMime.contains("text/")) {
-        return FileCategoryInfo("Documents", "Downloads/Downly/Documents", "Download/Downly/Documents/", cleanExt.uppercase(Locale.ROOT).ifBlank { "DOC" })
+    if (cleanExt in setOf(
+            "pdf",
+            "doc",
+            "docx",
+            "xls",
+            "xlsx",
+            "ppt",
+            "pptx",
+            "txt",
+            "csv",
+            "epub",
+            "rtf"
+        ) ||
+        cleanMime.contains("pdf") || cleanMime.contains("document") || cleanMime.contains("sheet") || cleanMime.contains(
+            "presentation"
+        ) || cleanMime.contains("text/")
+    ) {
+        return FileCategoryInfo(
+            "Documents",
+            "Downloads/Downly/Documents",
+            "Download/Downly/Documents/",
+            cleanExt.uppercase(Locale.ROOT).ifBlank { "DOC" })
     }
     if (cleanExt in setOf("zip", "rar", "7z", "tar", "gz", "bz2", "iso", "xz") ||
-        cleanMime.contains("zip") || cleanMime.contains("compressed") || cleanMime.contains("archive")) {
-        return FileCategoryInfo("Compressed", "Downloads/Downly/Compressed", "Download/Downly/Compressed/", cleanExt.uppercase(Locale.ROOT).ifBlank { "ZIP" })
+        cleanMime.contains("zip") || cleanMime.contains("compressed") || cleanMime.contains("archive")
+    ) {
+        return FileCategoryInfo(
+            "Compressed",
+            "Downloads/Downly/Compressed",
+            "Download/Downly/Compressed/",
+            cleanExt.uppercase(Locale.ROOT).ifBlank { "ZIP" })
     }
     if (cleanExt in setOf("apk", "exe", "msi", "deb", "dmg", "sh", "appimage") ||
-        cleanMime.contains("vnd.android.package-archive") || cleanMime.contains("executable")) {
-        return FileCategoryInfo("Programs", "Downloads/Downly/Programs", "Download/Downly/Programs/", cleanExt.uppercase(Locale.ROOT).ifBlank { "APP" })
+        cleanMime.contains("vnd.android.package-archive") || cleanMime.contains("executable")
+    ) {
+        return FileCategoryInfo(
+            "Programs",
+            "Downloads/Downly/Programs",
+            "Download/Downly/Programs/",
+            cleanExt.uppercase(Locale.ROOT).ifBlank { "APP" })
     }
     if (cleanExt == "torrent" || cleanMime.contains("torrent")) {
-        return FileCategoryInfo("Torrents", "Downloads/Downly/Torrents", "Download/Downly/Torrents/", "TORRENT")
+        return FileCategoryInfo(
+            "Torrents",
+            "Downloads/Downly/Torrents",
+            "Download/Downly/Torrents/",
+            "TORRENT"
+        )
     }
-    return FileCategoryInfo("Files", "Downloads/Downly", "Download/Downly/", cleanExt.uppercase(Locale.ROOT).ifBlank { "FILE" })
+    return FileCategoryInfo(
+        "Files",
+        "Downloads/Downly",
+        "Download/Downly/",
+        cleanExt.uppercase(Locale.ROOT).ifBlank { "FILE" })
 }
 
 fun probeDirectFile(urlStr: String): DirectFileProbe? {
     return runCatching {
         val parsedUrl = URL(urlStr)
-        val rawFileName = parsedUrl.path.substringAfterLast('/').takeIf { it.isNotBlank() } ?: "file"
+        val rawFileName =
+            parsedUrl.path.substringAfterLast('/').takeIf { it.isNotBlank() } ?: "file"
         val ext = rawFileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
 
         val knownDirectExtensions = setOf(
@@ -542,18 +643,19 @@ fun probeDirectFile(urlStr: String): DirectFileProbe? {
                     if (extracted.isNotBlank()) finalFileName = extracted
                 }
             }
-        } catch (_: Exception) {} finally {
+        } catch (_: Exception) {
+        } finally {
             conn?.disconnect()
         }
 
         val effectiveExt = finalFileName.substringAfterLast('.', ext).lowercase(Locale.ROOT)
         val isMimeDirect = mimeType.isNotBlank() && (
-            mimeType.startsWith("application/") ||
-            mimeType.startsWith("image/") ||
-            mimeType.startsWith("audio/") ||
-            mimeType.startsWith("video/") ||
-            mimeType.startsWith("text/")
-        ) && !mimeType.contains("html") && !mimeType.contains("json")
+                mimeType.startsWith("application/") ||
+                        mimeType.startsWith("image/") ||
+                        mimeType.startsWith("audio/") ||
+                        mimeType.startsWith("video/") ||
+                        mimeType.startsWith("text/")
+                ) && !mimeType.contains("html") && !mimeType.contains("json")
 
         if (!isExtensionMatch && !isMimeDirect) return null
 

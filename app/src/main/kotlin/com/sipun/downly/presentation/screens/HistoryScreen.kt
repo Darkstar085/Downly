@@ -13,16 +13,64 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.FolderZip
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.VideoFile
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -96,8 +144,8 @@ fun ActivityScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier) 
             HistoryFilter.FILES -> isFile
         }
         val matchesSearch = searchQuery.isBlank() ||
-            record.title.lowercase(Locale.ROOT).contains(searchQuery) ||
-            record.url.lowercase(Locale.ROOT).contains(searchQuery)
+                record.title.lowercase(Locale.ROOT).contains(searchQuery) ||
+                record.url.lowercase(Locale.ROOT).contains(searchQuery)
         matchesFilter && matchesSearch
     }
 
@@ -128,11 +176,33 @@ fun ActivityScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier) 
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                HistoryFilterChip("All", filter == HistoryFilter.ALL, Modifier.weight(1f)) { filter = HistoryFilter.ALL }
-                HistoryFilterChip("Video", filter == HistoryFilter.VIDEO, Modifier.weight(1f), Icons.Rounded.VideoFile) { filter = HistoryFilter.VIDEO }
-                HistoryFilterChip("Audio", filter == HistoryFilter.AUDIO, Modifier.weight(1f), Icons.Rounded.MusicNote) { filter = HistoryFilter.AUDIO }
-                HistoryFilterChip("Files", filter == HistoryFilter.FILES, Modifier.weight(1f), Icons.AutoMirrored.Rounded.InsertDriveFile) { filter = HistoryFilter.FILES }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HistoryFilterChip(
+                    "All",
+                    filter == HistoryFilter.ALL,
+                    Modifier.weight(1f)
+                ) { filter = HistoryFilter.ALL }
+                HistoryFilterChip(
+                    "Video",
+                    filter == HistoryFilter.VIDEO,
+                    Modifier.weight(1f),
+                    Icons.Rounded.VideoFile
+                ) { filter = HistoryFilter.VIDEO }
+                HistoryFilterChip(
+                    "Audio",
+                    filter == HistoryFilter.AUDIO,
+                    Modifier.weight(1f),
+                    Icons.Rounded.MusicNote
+                ) { filter = HistoryFilter.AUDIO }
+                HistoryFilterChip(
+                    "Files",
+                    filter == HistoryFilter.FILES,
+                    Modifier.weight(1f),
+                    Icons.AutoMirrored.Rounded.InsertDriveFile
+                ) { filter = HistoryFilter.FILES }
             }
         }
         if (state.history.any { it.status == DownloadStatus.COMPLETE || it.status == DownloadStatus.FAILED || it.status == DownloadStatus.CANCELLED }) {
@@ -143,15 +213,24 @@ fun ActivityScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier) 
                     shape = RoundedCornerShape(50),
                     contentPadding = PaddingValues(vertical = 12.dp)
                 ) {
-                    Icon(Icons.Rounded.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        Icons.Rounded.DeleteOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.clear_finished_failed), fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.clear_finished_failed),
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
         if (visibleRecords.isEmpty()) item {
             Box(
-                modifier = Modifier.fillParentMaxHeight(0.52f).fillMaxWidth(),
+                modifier = Modifier
+                    .fillParentMaxHeight(0.52f)
+                    .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 Card(
@@ -161,12 +240,16 @@ fun ActivityScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier) 
                     border = downlyCardBorder()
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 30.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 30.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Box(
-                            modifier = Modifier.size(76.dp).clip(RoundedCornerShape(26.dp))
+                            modifier = Modifier
+                                .size(76.dp)
+                                .clip(RoundedCornerShape(26.dp))
                                 .background(MaterialTheme.colorScheme.secondaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
@@ -211,10 +294,15 @@ private fun HistoryFilterChip(
     Surface(
         onClick = onClick, modifier = modifier.height(40.dp), shape = RoundedCornerShape(50),
         color = if (selected) accentGreen else MaterialTheme.colorScheme.surfaceContainerLow,
-        border = if (selected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        border = if (selected) null else BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -239,10 +327,15 @@ private fun HistoryFilterChip(
 }
 
 @Composable
-fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: DuplicateDownloadPrompt? = null) {
+fun DownloadCard(
+    record: DownloadRecord,
+    vm: DownlyViewModel,
+    duplicatePrompt: DuplicateDownloadPrompt? = null
+) {
     val context = LocalContext.current
     val audio = isAudioRecord(record)
-    val fileName = record.filePath?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: record.title
+    val fileName =
+        record.filePath?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: record.title
     var showCompletedMessage by remember(record.id, record.status) {
         mutableStateOf(record.status == DownloadStatus.COMPLETE)
     }
@@ -260,17 +353,28 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
     }
 
     val details by produceState(initialValue = MediaCardDetails(), key1 = record.filePath) {
-        value = withContext(Dispatchers.IO) { resolveMediaDetails(context, record.filePath, record) }
+        value =
+            withContext(Dispatchers.IO) { resolveMediaDetails(context, record.filePath, record) }
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         shape = DownlyUiShapes.card,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         border = downlyCardBorder()
     ) {
-        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Box(
                     Modifier
                         .size(width = 92.dp, height = 76.dp)
@@ -303,24 +407,61 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.AutoMirrored.Rounded.InsertDriveFile, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
-                        Text(details.fileType, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
-                        Icon(Icons.Rounded.Storage, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
-                        Text(details.size.takeIf { it != "—" } ?: downloadTotalSize(record.detail) ?: "—", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Rounded.CalendarMonth, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.InsertDriveFile,
+                            null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(15.dp)
+                        )
                         Text(
-                            DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(record.timestamp)),
+                            details.fileType,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        Icon(
+                            Icons.Rounded.Storage,
+                            null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(details.size.takeIf { it != "—" } ?: downloadTotalSize(record.detail)
+                        ?: "—",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall)
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.CalendarMonth,
+                            null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                                .format(Date(record.timestamp)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Rounded.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Folder,
+                            null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(15.dp)
+                        )
                         Text(
                             formatDisplayLocation(record.filePath, record.mode, record.title),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -342,12 +483,32 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.45f))
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.45f)
+                    )
                 ) {
-                    Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Duplicate file found", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onTertiaryContainer, fontWeight = FontWeight.SemiBold)
-                        Text("Choose whether to keep the existing file or replace it.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Duplicate file found",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Choose whether to keep the existing file or replace it.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             OutlinedButton(
                                 onClick = { vm.resolveDuplicate(replaceExisting = false) },
                                 modifier = Modifier.weight(1f),
@@ -368,7 +529,11 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                     }
                 }
             } else if (record.status == DownloadStatus.QUEUED || record.status == DownloadStatus.DOWNLOADING) {
-                LinearProgressIndicator(progress = { record.progress }, modifier = Modifier.fillMaxWidth(), color = Color(0xFF22C55E))
+                LinearProgressIndicator(
+                    progress = { record.progress },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF22C55E)
+                )
                 val cleanedDetail = record.detail
                     .replace("KiB", "KB")
                     .replace("MiB", "MB")
@@ -386,20 +551,31 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Rounded.DeleteOutline, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error)
+                        Icon(
+                            Icons.Rounded.DeleteOutline,
+                            contentDescription = "Remove",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                     OutlinedButton(
                         onClick = { vm.pause(record) },
                         shape = RoundedCornerShape(50)
                     ) {
-                        Icon(Icons.Rounded.Pause, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Rounded.Pause,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.pause_download))
                     }
                 }
             } else {
                 if (record.status != DownloadStatus.COMPLETE || showCompletedMessage) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Icon(
                             when (record.status) {
                                 DownloadStatus.COMPLETE -> Icons.Rounded.CheckCircle
@@ -407,11 +583,14 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                                 else -> Icons.Rounded.Download
                             },
                             contentDescription = null,
-                            tint = if (record.status == DownloadStatus.FAILED) MaterialTheme.colorScheme.error else Color(0xFF22C55E),
+                            tint = if (record.status == DownloadStatus.FAILED) MaterialTheme.colorScheme.error else Color(
+                                0xFF22C55E
+                            ),
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            record.detail.replace("KiB", "KB").replace("MiB", "MB").replace("GiB", "GB"),
+                            record.detail.replace("KiB", "KB").replace("MiB", "MB")
+                                .replace("GiB", "GB"),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 2,
@@ -426,9 +605,13 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (record.status == DownloadStatus.COMPLETE && record.filePath != null) {
-                        val isMedia = record.mode == MediaMode.VIDEO || record.mode == MediaMode.AUDIO || isVideoRecord(record) || isAudioRecord(record)
+                        val isMedia =
+                            record.mode == MediaMode.VIDEO || record.mode == MediaMode.AUDIO || isVideoRecord(
+                                record
+                            ) || isAudioRecord(record)
                         val btnText = if (isMedia) stringResource(R.string.play_action) else "Open"
-                        val btnIcon = if (isMedia) Icons.Rounded.PlayArrow else Icons.AutoMirrored.Rounded.OpenInNew
+                        val btnIcon =
+                            if (isMedia) Icons.Rounded.PlayArrow else Icons.AutoMirrored.Rounded.OpenInNew
                         Button(
                             onClick = { playMedia(context, record.filePath, audio) },
                             modifier = Modifier.weight(1f),
@@ -442,7 +625,11 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                         }
                     } else if (record.status == DownloadStatus.FAILED || record.status == DownloadStatus.PAUSED) {
                         Button(
-                            onClick = { if (record.status == DownloadStatus.FAILED) vm.retry(record) else vm.resume(record) },
+                            onClick = {
+                                if (record.status == DownloadStatus.FAILED) vm.retry(record) else vm.resume(
+                                    record
+                                )
+                            },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(50),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF22C55E))
@@ -463,7 +650,12 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
-                        Icon(Icons.Rounded.DeleteOutline, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Rounded.DeleteOutline,
+                            contentDescription = "Remove",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -491,7 +683,11 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                                 colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E))
                             )
                             Spacer(Modifier.width(6.dp))
-                            Text("Also delete file from storage", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Text(
+                                "Also delete file from storage",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                 }
@@ -524,9 +720,14 @@ private data class MediaCardDetails(
     val iconTint: Color = Color(0xFF22C55E)
 )
 
-private fun resolveMediaDetails(context: Context, path: String?, record: DownloadRecord): MediaCardDetails {
+private fun resolveMediaDetails(
+    context: Context,
+    path: String?,
+    record: DownloadRecord
+): MediaCardDetails {
     val cleanPath = path.orEmpty().lowercase(Locale.ROOT)
-    val ext = cleanPath.substringAfterLast('.', "").ifBlank { record.title.substringAfterLast('.', "").lowercase(Locale.ROOT) }
+    val ext = cleanPath.substringAfterLast('.', "")
+        .ifBlank { record.title.substringAfterLast('.', "").lowercase(Locale.ROOT) }
 
     val catInfo = resolveFileCategory(ext, "", record.mode)
 
@@ -538,7 +739,8 @@ private fun resolveMediaDetails(context: Context, path: String?, record: Downloa
         if (path.startsWith("/")) {
             File(path)
         } else {
-            val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+            val downloadsDir =
+                android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
             File(downloadsDir, path.removePrefix("Download/").removePrefix("Downloads/"))
         }
     } else null
@@ -549,16 +751,21 @@ private fun resolveMediaDetails(context: Context, path: String?, record: Downloa
         val name = path.substringAfterLast('/')
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
         runCatching {
-            val projection = arrayOf(MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.MIME_TYPE)
+            val projection =
+                arrayOf(MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.MIME_TYPE)
             val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
-            context.contentResolver.query(collection, projection, selection, arrayOf(name), null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val mediaSize = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE))
-                    if (mediaSize > 0) size = formatSize(mediaSize)
-                    val mediaMime = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE))
-                    if (!mediaMime.isNullOrBlank()) mime = mediaMime.substringAfter('/').uppercase(Locale.ROOT)
+            context.contentResolver.query(collection, projection, selection, arrayOf(name), null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val mediaSize =
+                            cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE))
+                        if (mediaSize > 0) size = formatSize(mediaSize)
+                        val mediaMime =
+                            cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE))
+                        if (!mediaMime.isNullOrBlank()) mime =
+                            mediaMime.substringAfter('/').uppercase(Locale.ROOT)
+                    }
                 }
-            }
         }
     }
 
@@ -577,7 +784,17 @@ private fun resolveMediaDetails(context: Context, path: String?, record: Downloa
             }.getOrNull()
         }
 
-        if (artwork == null && (record.mode == MediaMode.VIDEO || ext in setOf("mp4", "mkv", "webm", "avi", "mov", "flv", "3gp", "m4v"))) {
+        if (artwork == null && (record.mode == MediaMode.VIDEO || ext in setOf(
+                "mp4",
+                "mkv",
+                "webm",
+                "avi",
+                "mov",
+                "flv",
+                "3gp",
+                "m4v"
+            ))
+        ) {
             artwork = runCatching {
                 val retriever = MediaMetadataRetriever()
                 try {
@@ -589,13 +806,26 @@ private fun resolveMediaDetails(context: Context, path: String?, record: Downloa
             }.getOrNull()
         }
 
-        if (artwork == null && (record.mode == MediaMode.AUDIO || ext in setOf("mp3", "m4a", "wav", "flac", "aac", "ogg", "opus"))) {
+        if (artwork == null && (record.mode == MediaMode.AUDIO || ext in setOf(
+                "mp3",
+                "m4a",
+                "wav",
+                "flac",
+                "aac",
+                "ogg",
+                "opus"
+            ))
+        ) {
             artwork = runCatching {
                 val retriever = MediaMetadataRetriever()
                 try {
                     retriever.setDataSource(realPath)
                     val bytes = retriever.embeddedPicture
-                    if (bytes != null) android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) else null
+                    if (bytes != null) android.graphics.BitmapFactory.decodeByteArray(
+                        bytes,
+                        0,
+                        bytes.size
+                    ) else null
                 } finally {
                     runCatching { retriever.release() }
                 }
@@ -633,7 +863,8 @@ private fun formatDisplayLocation(filePath: String?, mode: MediaMode, title: Str
             return "Downloads/" + clean.substringAfter("Downloads/").substringBeforeLast('/')
         }
     }
-    val ext = filePath.orEmpty().substringAfterLast('.', "").ifBlank { title.substringAfterLast('.', "").lowercase(Locale.ROOT) }
+    val ext = filePath.orEmpty().substringAfterLast('.', "")
+        .ifBlank { title.substringAfterLast('.', "").lowercase(Locale.ROOT) }
     val catInfo = resolveFileCategory(ext, "", mode)
     return catInfo.folderPath
 }
@@ -650,8 +881,17 @@ private fun findMediaUri(context: Context, path: String, audio: Boolean): Uri? {
     val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
     return runCatching {
         val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
-        context.contentResolver.query(collection, arrayOf(MediaStore.MediaColumns._ID), selection, arrayOf(name), null)?.use { cursor ->
-            if (cursor.moveToFirst()) ContentUris.withAppendedId(collection, cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))) else null
+        context.contentResolver.query(
+            collection,
+            arrayOf(MediaStore.MediaColumns._ID),
+            selection,
+            arrayOf(name),
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) ContentUris.withAppendedId(
+                collection,
+                cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))
+            ) else null
         }
     }.getOrNull()
 }
@@ -664,15 +904,24 @@ private fun playMedia(context: Context, path: String, audio: Boolean) {
     } else {
         val file = File(path)
         if (!file.exists()) {
-            Toast.makeText(context, context.getString(R.string.file_not_found_media_library), Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.file_not_found_media_library),
+                Toast.LENGTH_LONG
+            ).show()
             return
         }
-        val fileUri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val fileUri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
         Intent(Intent.ACTION_VIEW).setDataAndType(fileUri, if (audio) "audio/*" else "*/*")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
     runCatching { context.startActivity(intent) }.onFailure {
-        Toast.makeText(context, context.getString(R.string.no_app_to_play_file), Toast.LENGTH_LONG).show()
+        Toast.makeText(context, context.getString(R.string.no_app_to_play_file), Toast.LENGTH_LONG)
+            .show()
     }
 }

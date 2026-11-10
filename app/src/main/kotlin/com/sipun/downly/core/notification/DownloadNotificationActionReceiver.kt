@@ -10,7 +10,8 @@ class DownloadNotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra(DownloadNotificationHelper.EXTRA_NOTIFICATION_ID, 0)
         val title = intent.getStringExtra(DownloadNotificationHelper.EXTRA_TITLE).orEmpty()
-        val downloadId = intent.getStringExtra(DownloadNotificationHelper.EXTRA_DOWNLOAD_ID).orEmpty()
+        val downloadId =
+            intent.getStringExtra(DownloadNotificationHelper.EXTRA_DOWNLOAD_ID).orEmpty()
         when (intent.action) {
             DownloadNotificationHelper.ACTION_PAUSE -> {
                 DownloadWorkManager.requestPause(downloadId)
@@ -18,6 +19,7 @@ class DownloadNotificationActionReceiver : BroadcastReceiver() {
                 YoutubeDL.destroyProcessById(downloadId)
                 DownloadNotificationHelper.showPaused(context, notificationId, title, downloadId)
             }
+
             DownloadNotificationHelper.ACTION_CANCEL,
             DownloadNotificationHelper.ACTION_REMOVE -> {
                 DownloadWorkManager.cancel(context, downloadId)

@@ -18,7 +18,8 @@ object RuntimeBundleInstaller {
     private const val RELEASE_API =
         "https://api.github.com/repos/$OWNER/$REPOSITORY/releases/latest"
     private const val MAX_BUNDLE_BYTES = 100L * 1024L * 1024L
-    @Volatile private var processInstalledDirectory: File? = null
+    @Volatile
+    private var processInstalledDirectory: File? = null
     private const val CONNECT_TIMEOUT_MS = 15_000
     private const val READ_TIMEOUT_MS = 45_000
 
@@ -101,13 +102,20 @@ object RuntimeBundleInstaller {
     }
 
     private fun isInstalledValid(directory: File): Boolean {
-        val required = listOf("libpython.zip.so", "libffmpeg.zip.so", "libaria2c.zip.so", "SHA256SUMS")
+        val required =
+            listOf("libpython.zip.so", "libffmpeg.zip.so", "libaria2c.zip.so", "SHA256SUMS")
         return required.all { File(directory, it).isFile } &&
-            runCatching { verifyChecksums(directory, File(directory, "SHA256SUMS")) }.getOrDefault(false)
+                runCatching {
+                    verifyChecksums(
+                        directory,
+                        File(directory, "SHA256SUMS")
+                    )
+                }.getOrDefault(false)
     }
 
     private fun findValidInstalledVersion(root: File): File? {
-        val required = listOf("libpython.zip.so", "libffmpeg.zip.so", "libaria2c.zip.so", "SHA256SUMS")
+        val required =
+            listOf("libpython.zip.so", "libffmpeg.zip.so", "libaria2c.zip.so", "SHA256SUMS")
         val versionDirectory = Regex("^libraries_v[0-9][A-Za-z0-9._+-]*$")
         return root.listFiles()
             ?.asSequence()
@@ -115,9 +123,9 @@ object RuntimeBundleInstaller {
             ?.sortedByDescending { it.lastModified() }
             ?.firstOrNull { directory ->
                 required.all { File(directory, it).isFile } &&
-                    runCatching {
-                        verifyChecksums(directory, File(directory, "SHA256SUMS"))
-                    }.getOrDefault(false)
+                        runCatching {
+                            verifyChecksums(directory, File(directory, "SHA256SUMS"))
+                        }.getOrDefault(false)
             }
     }
 
@@ -198,7 +206,12 @@ object RuntimeBundleInstaller {
                         total += count
                         if (total > MAX_BUNDLE_BYTES) throw IOException("Libraries archive exceeds size limit")
                         output.write(buffer, 0, count)
-                        onProgress(if (expectedBytes > 0L) (total.toFloat() / expectedBytes.toFloat()).coerceIn(0f, 1f) * 0.85f else null)
+                        onProgress(
+                            if (expectedBytes > 0L) (total.toFloat() / expectedBytes.toFloat()).coerceIn(
+                                0f,
+                                1f
+                            ) * 0.85f else null
+                        )
                     }
                     output.fd.sync()
                 }
@@ -212,7 +225,8 @@ object RuntimeBundleInstaller {
     }
 
     private fun extractBundle(bundle: File, destination: File) {
-        val allowed = setOf("libpython.zip.so", "libffmpeg.zip.so", "libaria2c.zip.so", "SHA256SUMS")
+        val allowed =
+            setOf("libpython.zip.so", "libffmpeg.zip.so", "libaria2c.zip.so", "SHA256SUMS")
         var count = 0
         var extractedBytes = 0L
         val seen = mutableSetOf<String>()
@@ -253,7 +267,8 @@ object RuntimeBundleInstaller {
         }
         val expected = manifest.readLines().map { line ->
             val match = Regex("^([0-9a-fA-F]{64}) [ *](lib(?:python|ffmpeg|aria2c)\\.zip\\.so)$")
-                .matchEntire(line.trim()) ?: throw IOException("Invalid Libraries archive checksum manifest")
+                .matchEntire(line.trim())
+                ?: throw IOException("Invalid Libraries archive checksum manifest")
             match.groupValues[2] to match.groupValues[1].lowercase()
         }.toMap()
         val names = setOf("libpython.zip.so", "libffmpeg.zip.so", "libaria2c.zip.so")

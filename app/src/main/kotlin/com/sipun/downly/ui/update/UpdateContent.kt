@@ -20,8 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sipun.downly.BuildConfig
@@ -30,10 +30,10 @@ import com.sipun.downly.core.update.AppUpdate
 import com.sipun.downly.core.update.DownloadProgress
 import com.sipun.downly.core.update.UpdateInstaller
 import com.sipun.downly.core.update.UpdateManager
-import com.sipun.downly.ui.components.DownloadProgressDialog
-import com.sipun.downly.ui.components.UpdateDialog
 import com.sipun.downly.presentation.theme.DownlyUiShapes
 import com.sipun.downly.presentation.theme.downlyDialogBorder
+import com.sipun.downly.ui.components.DownloadProgressDialog
+import com.sipun.downly.ui.components.UpdateDialog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -51,8 +51,10 @@ fun UpdateContent(
     val context = LocalContext.current
     val installer = remember { UpdateInstaller(context.applicationContext) }
     val appIcon = remember {
-        val drawable = androidx.core.content.ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
-        val bitmap = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888)
+        val drawable =
+            androidx.core.content.ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+        val bitmap =
+            android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888)
         drawable?.setBounds(0, 0, 96, 96)
         drawable?.draw(android.graphics.Canvas(bitmap))
         bitmap.asImageBitmap()
@@ -75,12 +77,22 @@ fun UpdateContent(
         onInstallRequestConsumed()
         when (installer.installDownloadedUpdate()) {
             UpdateInstaller.Result.Success -> Unit
-            UpdateInstaller.Result.FileMissing -> Toast.makeText(context, updateFileMissingMessage, Toast.LENGTH_LONG).show()
+            UpdateInstaller.Result.FileMissing -> Toast.makeText(
+                context,
+                updateFileMissingMessage,
+                Toast.LENGTH_LONG
+            ).show()
+
             UpdateInstaller.Result.PermissionRequired -> {
                 Toast.makeText(context, updatePermissionRequiredMessage, Toast.LENGTH_LONG).show()
                 installer.openInstallPermissionSettings()
             }
-            UpdateInstaller.Result.Failed -> Toast.makeText(context, updateInstallFailedMessage, Toast.LENGTH_LONG).show()
+
+            UpdateInstaller.Result.Failed -> Toast.makeText(
+                context,
+                updateInstallFailedMessage,
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -189,7 +201,7 @@ fun UpdateContent(
         } else {
             UpdateDialog(
                 update = update,
-                        isDownloaded = downloadedUpdate?.tag == update.tag,
+                isDownloaded = downloadedUpdate?.tag == update.tag,
                 isDownloading = downloading,
                 onDownload = {
                     downloading = true

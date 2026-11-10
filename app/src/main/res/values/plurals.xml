@@ -1,7 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <plurals name="options_count">
-        <item quantity="one">%1$d option</item>
-        <item quantity="other">%1$d options</item>
-    </plurals>
-</resources>
+<resources></resources>

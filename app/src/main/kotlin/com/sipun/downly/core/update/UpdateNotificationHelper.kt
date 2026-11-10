@@ -50,7 +50,12 @@ object UpdateNotificationHelper {
         NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(context.getString(R.string.update_notification_available_title))
-            .setContentText(context.getString(R.string.update_notification_available_text, update.version))
+            .setContentText(
+                context.getString(
+                    R.string.update_notification_available_text,
+                    update.version
+                )
+            )
             .addAction(
                 R.mipmap.ic_launcher,
                 context.getString(R.string.update_whats_new),
@@ -79,12 +84,21 @@ object UpdateNotificationHelper {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(context.getString(R.string.update_downloading_title))
-            .setContentText(context.getString(R.string.update_notification_progress_text, fileName, percent))
+            .setContentText(
+                context.getString(
+                    R.string.update_notification_progress_text,
+                    fileName,
+                    percent
+                )
+            )
             .setSubText(
                 context.getString(
                     R.string.update_notification_downloaded_size,
                     formatBytes(context, downloadedBytes),
-                    if (totalBytes > 0) context.getString(R.string.update_notification_size_separator, formatBytes(context, totalBytes)) else ""
+                    if (totalBytes > 0) context.getString(
+                        R.string.update_notification_size_separator,
+                        formatBytes(context, totalBytes)
+                    ) else ""
                 )
             )
             .setOngoing(true)
@@ -154,7 +168,8 @@ object UpdateNotificationHelper {
 
     private fun formatBytes(context: Context, value: Long): String {
         if (value < 1024L) return context.getString(R.string.update_bytes, value)
-        val units = arrayOf(R.string.update_kilobytes, R.string.update_megabytes, R.string.update_gigabytes)
+        val units =
+            arrayOf(R.string.update_kilobytes, R.string.update_megabytes, R.string.update_gigabytes)
         var size = value.toDouble()
         var unit = 0
         while (size >= 1024.0 && unit < units.lastIndex) {

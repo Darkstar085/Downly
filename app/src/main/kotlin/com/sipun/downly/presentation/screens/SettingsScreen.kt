@@ -1,28 +1,9 @@
 package com.sipun.downly.presentation.screens
 
-import android.os.Build
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
+import android.os.Build
 import android.widget.ImageView
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.Info
-import com.sipun.downly.BuildConfig
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.animateLottieCompositionAsState
-import com.airbnb.lottie.compose.rememberLottieComposition
-import com.airbnb.lottie.compose.rememberLottieDynamicProperties
-import com.airbnb.lottie.compose.rememberLottieDynamicProperty
-import com.airbnb.lottie.LottieProperty
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -40,7 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material3.AlertDialog
@@ -51,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,10 +41,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import com.sipun.downly.R
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.airbnb.lottie.LottieProperty
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.airbnb.lottie.compose.rememberLottieDynamicProperties
+import com.airbnb.lottie.compose.rememberLottieDynamicProperty
+import com.sipun.downly.BuildConfig
+import com.sipun.downly.R
 import com.sipun.downly.data.ScreenState
 import com.sipun.downly.presentation.DownlyViewModel
 import com.sipun.downly.presentation.theme.DownlyUiShapes
@@ -70,7 +69,12 @@ import com.sipun.downly.presentation.theme.downlyCardBorder
 import com.sipun.downly.presentation.theme.downlyDialogBorder
 
 @Composable
-fun SettingsScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier, onCheckForUpdates: () -> Unit = {}) {
+fun SettingsScreen(
+    state: ScreenState,
+    vm: DownlyViewModel,
+    modifier: Modifier,
+    onCheckForUpdates: () -> Unit = {}
+) {
     var showThemePreferences by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -102,7 +106,9 @@ fun SettingsScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier, 
             )
 
             Card(
-                modifier = Modifier.fillMaxWidth().animateContentSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(),
                 shape = DownlyUiShapes.card,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -265,7 +271,14 @@ fun SettingsScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier, 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.about_source_url)))) }
+                            .clickable {
+                                context.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse(context.getString(R.string.about_source_url))
+                                    )
+                                )
+                            }
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -305,15 +318,49 @@ fun SettingsScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier, 
     }
 
     if (showAboutDialog) {
-        Dialog(onDismissRequest = { showAboutDialog = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Surface(modifier = Modifier.fillMaxWidth(0.82f), shape = DownlyUiShapes.dialog, color = MaterialTheme.colorScheme.surface, border = downlyCardBorder(), tonalElevation = 0.dp, shadowElevation = 18.dp) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Dialog(
+            onDismissRequest = { showAboutDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(0.82f),
+                shape = DownlyUiShapes.dialog,
+                color = MaterialTheme.colorScheme.surface,
+                border = downlyCardBorder(),
+                tonalElevation = 0.dp,
+                shadowElevation = 18.dp
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     AndroidView(
-                        factory = { viewContext -> ImageView(viewContext).apply { setImageDrawable(viewContext.packageManager.getApplicationIcon(viewContext.packageName)) } },
-                        modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp))
+                        factory = { viewContext ->
+                            ImageView(viewContext).apply {
+                                setImageDrawable(
+                                    viewContext.packageManager.getApplicationIcon(viewContext.packageName)
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(16.dp))
                     )
-                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Text(stringResource(R.string.about_dialog_description), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(
+                        stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        stringResource(R.string.about_dialog_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                     val primaryColor = MaterialTheme.colorScheme.primary
                     val dynamicProperties = rememberLottieDynamicProperties(
                         rememberLottieDynamicProperty(
@@ -332,7 +379,11 @@ fun SettingsScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier, 
                         )
                     )
 
-                    val downloadComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.about_download))
+                    val downloadComposition by rememberLottieComposition(
+                        LottieCompositionSpec.RawRes(
+                            R.raw.about_download
+                        )
+                    )
                     val downloadProgress by animateLottieCompositionAsState(
                         composition = downloadComposition,
                         iterations = LottieConstants.IterateForever,
@@ -358,11 +409,28 @@ fun SettingsScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier, 
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                         border = downlyCardBorder()
                     ) {
-                        Text(stringResource(R.string.about_version, BuildConfig.VERSION_NAME), modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                        Text(stringResource(R.string.about_made_with), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                        val heartComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.about_heart))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.about_made_with),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        val heartComposition by rememberLottieComposition(
+                            LottieCompositionSpec.RawRes(
+                                R.raw.about_heart
+                            )
+                        )
                         val heartProgress by animateLottieCompositionAsState(
                             composition = heartComposition,
                             iterations = LottieConstants.IterateForever,
@@ -380,7 +448,11 @@ fun SettingsScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier, 
                         } else {
                             Box(modifier = Modifier.size(26.dp))
                         }
-                        Text(stringResource(R.string.about_by_sipun), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            stringResource(R.string.about_by_sipun),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
@@ -471,7 +543,9 @@ private fun ThemeOption(
     )
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         shape = DownlyUiShapes.card,
         border = downlyCardBorder(selected),
         colors = CardDefaults.cardColors(containerColor = containerColor),
@@ -493,7 +567,7 @@ private fun ThemeOption(
                 Box(contentAlignment = Alignment.Center) {
                     androidx.compose.runtime.CompositionLocalProvider(
                         androidx.compose.material3.LocalContentColor provides
-                            (if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                (if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
                     ) {
                         icon()
                     }
@@ -503,8 +577,16 @@ private fun ThemeOption(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             if (selected) {
                 Surface(

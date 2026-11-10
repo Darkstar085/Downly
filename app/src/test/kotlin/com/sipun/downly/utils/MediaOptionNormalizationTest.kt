@@ -7,21 +7,6 @@ import org.junit.Test
 
 class MediaOptionNormalizationTest {
     @Test
-    fun videoResolutionUsesCommonLevelsAndSupportsPortraitVideo() {
-        assertEquals(1080, commonVideoResolution(1080, 1920))
-        assertEquals(1080, commonVideoResolution(1920, 1080))
-        assertEquals(960, commonVideoResolution(1280, 960))
-        assertEquals(480, commonVideoResolution(854, 480))
-        assertNull(commonVideoResolution(320, 200))
-    }
-
-    @Test
-    fun nonStandardVideoResolutionIsNotRoundedDownToAnotherQuality() {
-        assertEquals(900, commonVideoResolution(1600, 900))
-        assertEquals(1080, commonVideoResolution(1080, 1920))
-    }
-
-    @Test
     fun genericVideoQualitiesUseStandardCapsAndPreserveNonStandardMaximum() {
         assertEquals(
             listOf(2160, 1440, 1080, 720, 480, 360, 240, 144),
@@ -52,7 +37,13 @@ class MediaOptionNormalizationTest {
 
     @Test
     fun videoFilenameUsesHumanReadableResolutionWithoutFormatSelector() {
-        assertEquals("2160p", downloadFilenameQuality(MediaMode.VIDEO, "video:bv*[height<=2160]+ba/b[height<=2160]/bv*+ba/b"))
+        assertEquals(
+            "2160p",
+            downloadFilenameQuality(
+                MediaMode.VIDEO,
+                "video:bv*[height<=2160]+ba/b[height<=2160]/bv*+ba/b"
+            )
+        )
         assertEquals("720p", downloadFilenameQuality(MediaMode.VIDEO, "720p"))
         assertEquals("audio-251", downloadFilenameQuality(MediaMode.AUDIO, "audio:251"))
     }
@@ -75,7 +66,10 @@ class MediaOptionNormalizationTest {
 
     @Test
     fun activeDownloadTotalSizeIsShownFromYtDlpProgressDetail() {
-        assertEquals("2.57 GiB", downloadTotalSize("[download] 4.9% of 2.57GiB at 7.13MiB/s ETA 05:51"))
+        assertEquals(
+            "2.57 GiB",
+            downloadTotalSize("[download] 4.9% of 2.57GiB at 7.13MiB/s ETA 05:51")
+        )
         assertEquals("1.2 GB", downloadTotalSize("[download] 10% of 1.2 GB at 5MiB/s ETA 01:00"))
         assertNull(downloadTotalSize("[download] 42.0% at 5MiB/s ETA 01:00"))
     }
@@ -83,12 +77,15 @@ class MediaOptionNormalizationTest {
     @Test
     fun qualityIdentitySeparatesResolutionsAndFormats() {
         assertEquals("video-1080p", downloadQualityTag(MediaMode.VIDEO, "1080p"))
-        assertEquals("video-137-bestaudio-137", downloadQualityTag(MediaMode.VIDEO, "video:137+bestaudio/137"))
+        assertEquals(
+            "video-137-bestaudio-137",
+            downloadQualityTag(MediaMode.VIDEO, "video:137+bestaudio/137")
+        )
         assertEquals("audio-251", downloadQualityTag(MediaMode.AUDIO, "audio:251"))
         assertEquals(
             false,
             mediaIdentityKey("video123", MediaMode.VIDEO, "1080p") ==
-                mediaIdentityKey("video123", MediaMode.VIDEO, "360p")
+                    mediaIdentityKey("video123", MediaMode.VIDEO, "360p")
         )
     }
 

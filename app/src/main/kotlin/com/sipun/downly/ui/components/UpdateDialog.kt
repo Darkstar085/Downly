@@ -1,24 +1,20 @@
 package com.sipun.downly.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -28,19 +24,18 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.foundation.Image
 import androidx.compose.ui.Modifier
-import com.sipun.downly.presentation.theme.DownlyUiShapes
-import com.sipun.downly.presentation.theme.downlyCardBorder
-import com.sipun.downly.presentation.theme.downlyDialogBorder
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringResource
 import com.sipun.downly.R
 import com.sipun.downly.core.update.AppUpdate
 import com.sipun.downly.core.update.DownloadProgress
+import com.sipun.downly.presentation.theme.DownlyUiShapes
+import com.sipun.downly.presentation.theme.downlyCardBorder
+import com.sipun.downly.presentation.theme.downlyDialogBorder
 
 @Composable
 fun UpdateDialog(
@@ -85,16 +80,32 @@ fun UpdateDialog(
                         Modifier.padding(horizontal = 15.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        UpdateInfoRow(Icons.Default.NewReleases, stringResource(R.string.update_label_version), update.version)
-                        UpdateInfoRow(Icons.Default.Inventory2, stringResource(R.string.update_label_download), formatSize(update.size))
+                        UpdateInfoRow(
+                            Icons.Default.NewReleases,
+                            stringResource(R.string.update_label_version),
+                            update.version
+                        )
+                        UpdateInfoRow(
+                            Icons.Default.Inventory2,
+                            stringResource(R.string.update_label_download),
+                            formatSize(update.size)
+                        )
                         update.releaseDate?.let {
-                            UpdateInfoRow(Icons.Default.NewReleases, stringResource(R.string.update_label_released), it)
+                            UpdateInfoRow(
+                                Icons.Default.NewReleases,
+                                stringResource(R.string.update_label_released),
+                                it
+                            )
                         }
                     }
                 }
                 if (update.notes.isNotBlank()) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(stringResource(R.string.update_whats_new), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(
+                            stringResource(R.string.update_whats_new),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
                         Column(
                             Modifier
                                 .fillMaxWidth()
@@ -144,7 +155,11 @@ fun DownloadProgressDialog(
             )
         },
         title = {
-            Text(stringResource(R.string.update_downloading_title), fontWeight = FontWeight.Bold, fontSize = 22.sp)
+            Text(
+                stringResource(R.string.update_downloading_title),
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp
+            )
         },
         text = {
             Column(

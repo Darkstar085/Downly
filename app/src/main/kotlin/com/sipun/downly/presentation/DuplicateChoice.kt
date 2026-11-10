@@ -11,4 +11,5 @@ internal fun duplicateChoiceFor(
 internal fun duplicatePromptForHistory(
     history: List<DownloadRecord>,
     prompt: DuplicateDownloadPrompt?
-): DuplicateDownloadPrompt? = prompt?.takeIf { candidate -> history.any { it.id == candidate.recordId } }
+): DuplicateDownloadPrompt? =
+    prompt?.takeIf { candidate -> history.any { it.id == candidate.recordId } }

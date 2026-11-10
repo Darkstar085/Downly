@@ -88,7 +88,8 @@ progress and controls available from Android notifications.
 - View media details such as file type, size, and download date.
 - Open a completed file or play it with a compatible app.
 - Detect duplicate downloads and choose whether to keep the existing file or replace it.
-- Restore pending duplicate choices after app recreation and reconcile history when a file is replaced.
+- Restore pending duplicate choices after app recreation and reconcile history when a file is
+  replaced.
 - Protect the existing file if replacement fails.
 - Clear finished and failed records.
 
@@ -135,7 +136,7 @@ The interface focuses on:
 | Language              | Kotlin                             |
 | UI                    | Jetpack Compose                    |
 | Design                | Material 3                         |
-| Build                 | Gradle 9.6.0 / Kotlin DSL           |
+| Build                 | Gradle 9.6.0 / Kotlin DSL          |
 | Android plugin        | Android Gradle Plugin 9.5.0        |
 | Serialization         | Kotlinx Serialization              |
 | Background work       | WorkManager                        |
@@ -172,7 +173,8 @@ app/
 ```
 
 - **UI:** Download, History, and Settings screens are implemented with Jetpack Compose.
-- **Update flow:** GitHub Release lookup, manifest validation, APK digest verification, and installer
+- **Update flow:** GitHub Release lookup, manifest validation, APK digest verification, and
+  installer
   handling live under `core/update/`.
 - **Local data:** Download state and history are managed in the app; downloaded media stays in
   app-specific/media storage.

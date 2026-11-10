@@ -6,7 +6,20 @@ import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,16 +27,56 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.FolderZip
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -52,16 +105,23 @@ fun DownloadScreen(
     }
 
     LazyColumn(
-        modifier = modifier.fillMaxSize().imePadding(),
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Card(
-                modifier = Modifier.fillMaxWidth().animateContentSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -100,37 +160,59 @@ fun DownloadScreen(
                         }
                         Surface(
                             onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
+                                val clipboard =
+                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val text =
+                                    clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)
+                                        ?.toString().orEmpty()
                                 if (text.isNotBlank()) vm.setUrl(text.trim())
-                                else Toast.makeText(context, context.getString(R.string.clipboard_empty), Toast.LENGTH_SHORT).show()
+                                else Toast.makeText(
+                                    context,
+                                    context.getString(R.string.clipboard_empty),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             },
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
                         ) {
                             Icon(
                                 Icons.Rounded.ContentPaste,
                                 contentDescription = "Paste",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(10.dp).size(20.dp)
+                                modifier = Modifier
+                                    .padding(10.dp)
+                                    .size(20.dp)
                             )
                         }
                     }
 
-                    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+                    val keyboardController =
+                        androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
                     OutlinedTextField(
                         value = state.url,
                         onValueChange = vm::setUrl,
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("https://...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                        placeholder = {
+                            Text(
+                                "https://...",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        },
                         singleLine = true,
                         shape = RoundedCornerShape(14.dp),
                         trailingIcon = {
                             if (state.url.isNotBlank()) {
                                 IconButton(onClick = { vm.setUrl("") }) {
-                                    Icon(Icons.Rounded.Close, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Icon(
+                                        Icons.Rounded.Close,
+                                        contentDescription = "Clear",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         },
@@ -155,14 +237,18 @@ fun DownloadScreen(
                             focusManager.clearFocus()
                             vm.fetchInfo()
                         },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
                         enabled = !state.busy && state.url.isNotBlank(),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = accentGreen,
                             contentColor = Color.White,
                             disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.5f
+                            )
                         )
                     ) {
                         if (state.busy) {
@@ -172,10 +258,15 @@ fun DownloadScreen(
                                 strokeWidth = 2.5.dp
                             )
                             Spacer(Modifier.width(10.dp))
-                            val btnText = if (!state.initialized) "Installing libraries..." else "Fetching..."
+                            val btnText =
+                                if (!state.initialized) "Installing libraries..." else "Fetching..."
                             Text(btnText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         } else {
-                            Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Icon(
+                                Icons.Rounded.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
                             Spacer(Modifier.width(8.dp))
                             Text("Fetch", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         }
@@ -280,7 +371,10 @@ fun DownloadScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -323,7 +417,10 @@ fun DownloadScreen(
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(
+                                            horizontal = 4.dp,
+                                            vertical = 2.dp
+                                        )
                                     )
                                 }
                             }
@@ -358,7 +455,8 @@ fun DownloadScreen(
                                         modifier = Modifier.size(12.dp)
                                     )
                                 }
-                                val maxQuality = preview.qualityOptions.firstOrNull()?.quality ?: "1080p"
+                                val maxQuality =
+                                    preview.qualityOptions.firstOrNull()?.quality ?: "1080p"
                                 val estBytes = preview.qualityOptions.firstOrNull()?.estimatedBytes
                                 val estSizeStr = estBytes?.let { formatBytes(it) } ?: "1.2 GB"
                                 Text(
@@ -389,16 +487,22 @@ fun DownloadScreen(
                         val isVideo = state.mode == MediaMode.VIDEO
                         Surface(
                             onClick = { vm.setMode(MediaMode.VIDEO) },
-                            modifier = Modifier.weight(1f).height(80.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(80.dp),
                             shape = RoundedCornerShape(16.dp),
                             color = if (isVideo) accentGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceContainerLow,
                             border = BorderStroke(
                                 if (isVideo) 2.dp else 1.dp,
-                                if (isVideo) accentGreen else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                if (isVideo) accentGreen else MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = 0.5f
+                                )
                             )
                         ) {
                             Column(
-                                modifier = Modifier.fillMaxSize().padding(10.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(10.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
@@ -430,16 +534,22 @@ fun DownloadScreen(
                         val isAudio = state.mode == MediaMode.AUDIO
                         Surface(
                             onClick = { vm.setMode(MediaMode.AUDIO) },
-                            modifier = Modifier.weight(1f).height(80.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(80.dp),
                             shape = RoundedCornerShape(16.dp),
                             color = if (isAudio) accentGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceContainerLow,
                             border = BorderStroke(
                                 if (isAudio) 2.dp else 1.dp,
-                                if (isAudio) accentGreen else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                if (isAudio) accentGreen else MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = 0.5f
+                                )
                             )
                         ) {
                             Column(
-                                modifier = Modifier.fillMaxSize().padding(10.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(10.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
@@ -483,18 +593,26 @@ fun DownloadScreen(
                     Box {
                         Surface(
                             onClick = { vm.setQualityDropdownExpanded(!state.qualityDropdownExpanded) },
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
                             shape = RoundedCornerShape(14.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 val currentLabel = if (state.mode == MediaMode.VIDEO) {
-                                    val opt = preview.qualityOptions.firstOrNull { it.quality == state.recommendedQuality }
+                                    val opt =
+                                        preview.qualityOptions.firstOrNull { it.quality == state.recommendedQuality }
                                     if (opt != null) "${opt.quality} (Recommended)" else "1080p (Recommended)"
                                 } else {
                                     "Highest Audio Quality"
@@ -554,11 +672,20 @@ fun DownloadScreen(
             item {
                 Button(
                     onClick = vm::startBestDownload,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = accentGreen, contentColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentGreen,
+                        contentColor = Color.White
+                    )
                 ) {
-                    Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(22.dp))
+                    Icon(
+                        Icons.Rounded.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
                     Text("Download", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
@@ -573,7 +700,10 @@ fun DownloadScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 ) {
                     Row(
                         modifier = Modifier.padding(14.dp),
@@ -623,7 +753,10 @@ fun DownloadScreen(
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = accentGreen,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        modifier = Modifier.padding(
+                                            horizontal = 8.dp,
+                                            vertical = 3.dp
+                                        )
                                     )
                                 }
                                 Surface(
@@ -634,7 +767,10 @@ fun DownloadScreen(
                                         preview.fileSize?.let { formatBytes(it) } ?: "82.4 MB",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        modifier = Modifier.padding(
+                                            horizontal = 8.dp,
+                                            vertical = 3.dp
+                                        )
                                     )
                                 }
                             }
@@ -652,13 +788,20 @@ fun DownloadScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Surface(
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -666,7 +809,12 @@ fun DownloadScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(Icons.Rounded.Folder, contentDescription = null, tint = accentGreen, modifier = Modifier.size(20.dp))
+                                Icon(
+                                    Icons.Rounded.Folder,
+                                    contentDescription = null,
+                                    tint = accentGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
                                 Text(
                                     state.downloadLocation,
                                     fontWeight = FontWeight.SemiBold,
@@ -674,7 +822,11 @@ fun DownloadScreen(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                            Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(
+                                Icons.Rounded.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -694,7 +846,12 @@ fun DownloadScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         leadingIcon = {
-                            Icon(Icons.Rounded.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            Icon(
+                                Icons.Rounded.Edit,
+                                contentDescription = "Edit",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
                         },
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -714,7 +871,10 @@ fun DownloadScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(
@@ -726,8 +886,17 @@ fun DownloadScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(Icons.Rounded.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                                Text("Advanced options", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge)
+                                Icon(
+                                    Icons.Rounded.Settings,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    "Advanced options",
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
                             }
                             Icon(
                                 if (state.advancedExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
@@ -737,10 +906,22 @@ fun DownloadScreen(
                         }
                         if (state.advancedExpanded) {
                             Spacer(Modifier.height(10.dp))
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = 0.4f
+                                )
+                            )
                             Spacer(Modifier.height(10.dp))
-                            Text("MIME type: ${preview.mimeType}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Direct URL download", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "MIME type: ${preview.mimeType}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                "Direct URL download",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -749,11 +930,20 @@ fun DownloadScreen(
             item {
                 Button(
                     onClick = vm::startBestDownload,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = accentGreen, contentColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentGreen,
+                        contentColor = Color.White
+                    )
                 ) {
-                    Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(22.dp))
+                    Icon(
+                        Icons.Rounded.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
                     Text("Download", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
@@ -781,67 +971,164 @@ private fun AdvancedDownloadSettings(
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Advanced options", modifier = Modifier.weight(1f).padding(start = 8.dp), fontWeight = FontWeight.SemiBold)
+                Icon(
+                    Icons.Rounded.Tune,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Advanced options",
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp),
+                    fontWeight = FontWeight.SemiBold
+                )
                 if (expanded) {
-                    TextButton(onClick = { onSettingsChange(com.sipun.downly.data.DownloadSettings()) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                    TextButton(
+                        onClick = { onSettingsChange(com.sipun.downly.data.DownloadSettings()) },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
                         Text("Reset")
                     }
                 }
                 IconButton(onClick = { expanded = !expanded }) {
-                    Icon(if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, contentDescription = if (expanded) "Collapse advanced options" else "Expand advanced options")
+                    Icon(
+                        if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                        contentDescription = if (expanded) "Collapse advanced options" else "Expand advanced options"
+                    )
                 }
             }
             if (expanded && showVideo) {
-                Text("Video", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                SettingRow("Container", settings.videoFormat, listOf("Auto", "MP4", "MKV", "WebM")) {
+                Text(
+                    "Video",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                SettingRow(
+                    "Container",
+                    settings.videoFormat,
+                    listOf("Auto", "MP4", "MKV", "WebM")
+                ) {
                     onSettingsChange(settings.copy(videoFormat = it))
                 }
-                SettingRow("Video codec", settings.videoCodec, listOf("Auto", "H.264", "H.265", "AV1")) {
+                SettingRow(
+                    "Video codec",
+                    settings.videoCodec,
+                    listOf("Auto", "H.264", "H.265", "AV1")
+                ) {
                     onSettingsChange(settings.copy(videoCodec = it))
                 }
-                SettingRow("FPS preference", settings.videoFps, listOf("Original", "30 fps", "60 fps")) {
+                SettingRow(
+                    "FPS preference",
+                    settings.videoFps,
+                    listOf("Original", "30 fps", "60 fps")
+                ) {
                     onSettingsChange(settings.copy(videoFps = it))
                 }
-                SettingRow("Audio codec", settings.videoAudioCodec, listOf("Original", "AAC", "Opus")) {
+                SettingRow(
+                    "Audio codec",
+                    settings.videoAudioCodec,
+                    listOf("Original", "AAC", "Opus")
+                ) {
                     onSettingsChange(settings.copy(videoAudioCodec = it))
                 }
-                SettingToggleRow("Subtitles", settings.subtitles) { onSettingsChange(settings.copy(subtitles = it)) }
-                SettingToggleRow("Embed thumbnail", settings.videoThumbnail) { onSettingsChange(settings.copy(videoThumbnail = it)) }
-                SettingToggleRow("Embed metadata", settings.videoMetadata) { onSettingsChange(settings.copy(videoMetadata = it)) }
+                SettingToggleRow("Subtitles", settings.subtitles) {
+                    onSettingsChange(
+                        settings.copy(
+                            subtitles = it
+                        )
+                    )
+                }
+                SettingToggleRow("Embed thumbnail", settings.videoThumbnail) {
+                    onSettingsChange(
+                        settings.copy(videoThumbnail = it)
+                    )
+                }
+                SettingToggleRow("Embed metadata", settings.videoMetadata) {
+                    onSettingsChange(
+                        settings.copy(videoMetadata = it)
+                    )
+                }
             }
             if (expanded && showAudio) {
-                Text("Audio", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                SettingRow("Format", settings.audioFormat, listOf("MP3", "M4A", "AAC", "FLAC", "WAV", "Opus")) {
+                Text(
+                    "Audio",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                SettingRow(
+                    "Format",
+                    settings.audioFormat,
+                    listOf("MP3", "M4A", "AAC", "FLAC", "WAV", "Opus")
+                ) {
                     onSettingsChange(settings.copy(audioFormat = it))
                 }
-                SettingRow("Bitrate", settings.audioBitrate, listOf("96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps")) {
+                SettingRow(
+                    "Bitrate",
+                    settings.audioBitrate,
+                    listOf("96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps")
+                ) {
                     onSettingsChange(settings.copy(audioBitrate = it))
                 }
-                SettingRow("Sample rate", settings.audioSampleRate, listOf("Original", "44.1 kHz", "48 kHz")) {
+                SettingRow(
+                    "Sample rate",
+                    settings.audioSampleRate,
+                    listOf("Original", "44.1 kHz", "48 kHz")
+                ) {
                     onSettingsChange(settings.copy(audioSampleRate = it))
                 }
-                SettingRow("Channels", settings.audioChannels, listOf("Original", "Stereo", "Mono")) {
+                SettingRow(
+                    "Channels",
+                    settings.audioChannels,
+                    listOf("Original", "Stereo", "Mono")
+                ) {
                     onSettingsChange(settings.copy(audioChannels = it))
                 }
-                SettingToggleRow("Normalize volume", settings.normalizeAudio) { onSettingsChange(settings.copy(normalizeAudio = it)) }
-                SettingToggleRow("Embed thumbnail", settings.audioThumbnail) { onSettingsChange(settings.copy(audioThumbnail = it)) }
-                SettingToggleRow("Embed metadata", settings.audioMetadata) { onSettingsChange(settings.copy(audioMetadata = it)) }
+                SettingToggleRow("Normalize volume", settings.normalizeAudio) {
+                    onSettingsChange(
+                        settings.copy(normalizeAudio = it)
+                    )
+                }
+                SettingToggleRow("Embed thumbnail", settings.audioThumbnail) {
+                    onSettingsChange(
+                        settings.copy(audioThumbnail = it)
+                    )
+                }
+                SettingToggleRow("Embed metadata", settings.audioMetadata) {
+                    onSettingsChange(
+                        settings.copy(audioMetadata = it)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SettingRow(label: String, value: String, options: List<String>, onSelect: (String) -> Unit) {
+private fun SettingRow(
+    label: String,
+    value: String,
+    options: List<String>,
+    onSelect: (String) -> Unit
+) {
     var menuExpanded by remember { mutableStateOf(false) }
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 40.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         Box {
-            TextButton(onClick = { menuExpanded = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
+            TextButton(
+                onClick = { menuExpanded = true },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+            ) {
                 Text(value, style = MaterialTheme.typography.labelLarge)
                 Icon(Icons.Rounded.ArrowDropDown, contentDescription = null)
             }
@@ -860,7 +1147,9 @@ private fun SettingRow(label: String, value: String, options: List<String>, onSe
 @Composable
 private fun SettingToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 40.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
@@ -883,7 +1172,9 @@ private fun CategoryCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -894,7 +1185,12 @@ private fun CategoryCard(
                     .background(iconTint.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(20.dp)
+                )
             }
             Column(
                 modifier = Modifier.weight(1f),

@@ -1,8 +1,8 @@
 package com.sipun.downly.core.service
 
-import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class ForegroundServiceManifestTest {
     @Test
