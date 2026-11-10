@@ -544,41 +544,11 @@ fun DownloadScreen(
             }
 
             item {
-                Surface(
-                    onClick = { vm.setAdvancedExpanded(!state.advancedExpanded) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Icon(Icons.Rounded.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                                Text("Advanced options", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge)
-                            }
-                            Icon(
-                                if (state.advancedExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (state.advancedExpanded) {
-                            Spacer(Modifier.height(10.dp))
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                            Spacer(Modifier.height(10.dp))
-                            Text("Connection: ${state.connectionType}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Extractor: yt-dlp native", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
+                AdvancedDownloadSettings(
+                    mode = state.mode,
+                    settings = state.downloadSettings,
+                    onSettingsChange = vm::setDownloadSettings
+                )
             }
 
             item {
@@ -789,6 +759,121 @@ fun DownloadScreen(
                 }
             }
         }
+    }
+}
+
+
+@Composable
+private fun AdvancedDownloadSettings(
+    mode: MediaMode,
+    settings: com.sipun.downly.data.DownloadSettings,
+    onSettingsChange: (com.sipun.downly.data.DownloadSettings) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var selectedTab by remember(mode) { mutableStateOf(if (mode == MediaMode.AUDIO) 1 else 0) }
+    val showVideo = mode == MediaMode.VIDEO && selectedTab == 0
+    val showAudio = mode == MediaMode.AUDIO || selectedTab == 1
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Advanced options", modifier = Modifier.weight(1f).padding(start = 8.dp), fontWeight = FontWeight.SemiBold)
+                if (expanded) {
+                    TextButton(onClick = { onSettingsChange(com.sipun.downly.data.DownloadSettings()) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                        Text("Reset")
+                    }
+                }
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, contentDescription = if (expanded) "Collapse advanced options" else "Expand advanced options")
+                }
+            }
+            if (expanded) {
+                if (mode == MediaMode.VIDEO) {
+                    TabRow(selectedTabIndex = selectedTab) {
+                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Video") })
+                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Audio") })
+                    }
+                } else {
+                    Text("Audio", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                }
+                if (showVideo) {
+                    SettingRow("Container", settings.videoFormat, listOf("Auto", "MP4", "MKV", "WebM")) {
+                        onSettingsChange(settings.copy(videoFormat = it))
+                    }
+                    SettingRow("Video codec", settings.videoCodec, listOf("Auto", "H.264", "H.265", "AV1")) {
+                        onSettingsChange(settings.copy(videoCodec = it))
+                    }
+                    SettingRow("FPS preference", settings.videoFps, listOf("Original", "30 fps", "60 fps")) {
+                        onSettingsChange(settings.copy(videoFps = it))
+                    }
+                    SettingRow("Audio codec", settings.videoAudioCodec, listOf("Original", "AAC", "Opus")) {
+                        onSettingsChange(settings.copy(videoAudioCodec = it))
+                    }
+                    SettingToggleRow("Subtitles", settings.subtitles) { onSettingsChange(settings.copy(subtitles = it)) }
+                    SettingToggleRow("Embed thumbnail", settings.videoThumbnail) { onSettingsChange(settings.copy(videoThumbnail = it)) }
+                    SettingToggleRow("Embed metadata", settings.videoMetadata) { onSettingsChange(settings.copy(videoMetadata = it)) }
+                }
+                if (showAudio) {
+                    SettingRow("Format", settings.audioFormat, listOf("MP3", "M4A", "AAC", "FLAC", "WAV", "Opus")) {
+                        onSettingsChange(settings.copy(audioFormat = it))
+                    }
+                    SettingRow("Bitrate", settings.audioBitrate, listOf("96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps")) {
+                        onSettingsChange(settings.copy(audioBitrate = it))
+                    }
+                    SettingRow("Sample rate", settings.audioSampleRate, listOf("Original", "44.1 kHz", "48 kHz")) {
+                        onSettingsChange(settings.copy(audioSampleRate = it))
+                    }
+                    SettingRow("Channels", settings.audioChannels, listOf("Original", "Stereo", "Mono")) {
+                        onSettingsChange(settings.copy(audioChannels = it))
+                    }
+                    SettingToggleRow("Normalize volume", settings.normalizeAudio) { onSettingsChange(settings.copy(normalizeAudio = it)) }
+                    SettingToggleRow("Embed thumbnail", settings.audioThumbnail) { onSettingsChange(settings.copy(audioThumbnail = it)) }
+                    SettingToggleRow("Embed metadata", settings.audioMetadata) { onSettingsChange(settings.copy(audioMetadata = it)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingRow(label: String, value: String, options: List<String>, onSelect: (String) -> Unit) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        Box {
+            TextButton(onClick = { menuExpanded = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
+                Text(value, style = MaterialTheme.typography.labelLarge)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null)
+            }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = { onSelect(option); menuExpanded = false }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

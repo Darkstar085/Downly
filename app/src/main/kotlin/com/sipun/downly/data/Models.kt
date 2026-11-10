@@ -63,6 +63,23 @@ data class DuplicateDownloadPrompt(
     val fileName: String
 )
 
+data class DownloadSettings(
+    val videoFormat: String = "Auto",
+    val videoCodec: String = "Auto",
+    val videoFps: String = "Original",
+    val videoAudioCodec: String = "Original",
+    val subtitles: Boolean = false,
+    val videoThumbnail: Boolean = true,
+    val videoMetadata: Boolean = true,
+    val audioFormat: String = "MP3",
+    val audioBitrate: String = "320 kbps",
+    val audioSampleRate: String = "Original",
+    val audioChannels: String = "Original",
+    val normalizeAudio: Boolean = false,
+    val audioThumbnail: Boolean = true,
+    val audioMetadata: Boolean = true
+)
+
 data class ScreenState(
     val url: String = "",
     val initialized: Boolean = false,
@@ -86,6 +103,7 @@ data class ScreenState(
     val qualityDropdownExpanded: Boolean = false,
     val historySearchQuery: String = "",
     val isSearchActive: Boolean = false,
-    val historyFilter: String = "ALL"
+    val historyFilter: String = "ALL",
+    val downloadSettings: DownloadSettings = DownloadSettings()
 )
 

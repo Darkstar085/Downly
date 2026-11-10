@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModel
 import com.sipun.downly.runtime.RuntimeBundleInstaller
 import com.sipun.downly.data.DownloadRecord
 import com.sipun.downly.data.DownloadStatus
+import com.sipun.downly.data.DownloadSettings
 import com.sipun.downly.data.DuplicateDownloadPrompt
 import com.sipun.downly.data.MediaMode
 import com.sipun.downly.data.MediaPreview
@@ -122,11 +123,13 @@ class DownlyViewModel : ViewModel() {
             val settings = appContext!!.getSharedPreferences("downly-settings", Context.MODE_PRIVATE)
             val savedTheme = settings.getString("theme_mode", "System") ?: "System"
             val dynamicColor = settings.getBoolean("dynamic_color", false)
+            val downloadSettings = readDownloadSettings(settings)
             val restoredHistory = readHistory(appContext!!)
             val restoredDuplicatePrompt = readDuplicatePrompt(appContext!!)
             _state.value = _state.value.copy(
                 themeMode = savedTheme,
                 dynamicColor = dynamicColor,
+                downloadSettings = downloadSettings,
                 history = restoredHistory,
                 duplicatePrompt = restoredDuplicatePrompt
             )
@@ -160,6 +163,34 @@ class DownlyViewModel : ViewModel() {
     fun setQuality(value: String) = mutate { copy(quality = value) }
     fun setTab(value: Int) = mutate { copy(tab = value) }
     fun setCustomFileName(value: String) = mutate { copy(customFileName = value) }
+    fun setDownloadSettings(value: DownloadSettings) {
+        mutate { copy(downloadSettings = value) }
+        appContext?.getSharedPreferences("downly-settings", Context.MODE_PRIVATE)?.edit()
+            ?.putString("video_format", value.videoFormat)?.putString("video_codec", value.videoCodec)
+            ?.putString("video_fps", value.videoFps)?.putString("video_audio_codec", value.videoAudioCodec)
+            ?.putBoolean("video_subtitles", value.subtitles)?.putBoolean("video_thumbnail", value.videoThumbnail)
+            ?.putBoolean("video_metadata", value.videoMetadata)?.putString("audio_format", value.audioFormat)
+            ?.putString("audio_bitrate", value.audioBitrate)?.putString("audio_sample_rate", value.audioSampleRate)
+            ?.putString("audio_channels", value.audioChannels)?.putBoolean("audio_normalize", value.normalizeAudio)
+            ?.putBoolean("audio_thumbnail", value.audioThumbnail)?.putBoolean("audio_metadata", value.audioMetadata)?.apply()
+    }
+
+    private fun readDownloadSettings(p: android.content.SharedPreferences) = DownloadSettings(
+        videoFormat = p.getString("video_format", "Auto") ?: "Auto",
+        videoCodec = p.getString("video_codec", "Auto") ?: "Auto",
+        videoFps = p.getString("video_fps", "Original") ?: "Original",
+        videoAudioCodec = p.getString("video_audio_codec", "Original") ?: "Original",
+        subtitles = p.getBoolean("video_subtitles", false),
+        videoThumbnail = p.getBoolean("video_thumbnail", true),
+        videoMetadata = p.getBoolean("video_metadata", true),
+        audioFormat = p.getString("audio_format", "MP3") ?: "MP3",
+        audioBitrate = p.getString("audio_bitrate", "320 kbps") ?: "320 kbps",
+        audioSampleRate = p.getString("audio_sample_rate", "Original") ?: "Original",
+        audioChannels = p.getString("audio_channels", "Original") ?: "Original",
+        normalizeAudio = p.getBoolean("audio_normalize", false),
+        audioThumbnail = p.getBoolean("audio_thumbnail", true),
+        audioMetadata = p.getBoolean("audio_metadata", true)
+    )
     fun setAdvancedExpanded(value: Boolean) = mutate { copy(advancedExpanded = value) }
     fun setQualityDropdownExpanded(value: Boolean) = mutate { copy(qualityDropdownExpanded = value) }
     fun setHistorySearchQuery(value: String) = mutate { copy(historySearchQuery = value) }
@@ -483,7 +514,7 @@ class DownlyViewModel : ViewModel() {
         quality: String,
         connectionType: String
     ) {
-        executeDownload(record, mode, quality, connectionType)
+        executeDownload(record, mode, quality, connectionType, _state.value.downloadSettings)
     }
 
     fun flushHistoryForWorker(id: String) {
@@ -498,7 +529,7 @@ class DownlyViewModel : ViewModel() {
             .commit()
     }
 
-    private fun executeDownload(record: DownloadRecord, mode: MediaMode, quality: String, connectionType: String) {
+    private fun executeDownload(record: DownloadRecord, mode: MediaMode, quality: String, connectionType: String, settings: DownloadSettings) {
         if (cancelledIds.remove(record.id)) return
         try {
             setRecord(record.id) { copy(status = DownloadStatus.DOWNLOADING, detail = "Starting download…") }
@@ -519,18 +550,46 @@ class DownlyViewModel : ViewModel() {
                 if (mode == MediaMode.AUDIO) {
                     val audioFormatId = quality.takeIf { it.startsWith("audio:") }?.removePrefix("audio:")
                     val formatSpec = if (!audioFormatId.isNullOrBlank()) "$audioFormatId/ba/b" else "ba/b"
-                    request.addOption("-f", formatSpec)
-                        .addOption("-x")
-                        .addOption("--audio-format", "mp3")
-                        .addOption("--audio-quality", if (connectionType == "Mobile data") "5" else "0")
+                    request.addOption("-f", formatSpec).addOption("-x")
+                        .addOption("--audio-format", settings.audioFormat.lowercase())
+                    settings.audioBitrate.removeSuffix(" kbps").toIntOrNull()?.let {
+                        request.addOption("--audio-quality", it.toString() + "K")
+                    }
+                    val audioPostArgs = buildList {
+                        settings.audioSampleRate.removeSuffix(" kHz").toDoubleOrNull()?.let { add("-ar " + (it * 1000).toInt()) }
+                        when (settings.audioChannels) {
+                            "Mono" -> add("-ac 1")
+                            "Stereo" -> add("-ac 2")
+                        }
+                        if (settings.normalizeAudio) add("-af loudnorm")
+                    }
+                    if (audioPostArgs.isNotEmpty()) request.addOption("--postprocessor-args", "ExtractAudio+ffmpeg_o:" + audioPostArgs.joinToString(" "))
+                    if (settings.audioThumbnail) request.addOption("--embed-thumbnail")
+                    if (settings.audioMetadata) request.addOption("--embed-metadata")
                 } else {
                     val explicitSelector = quality.takeIf { it.startsWith("video:") }?.removePrefix("video:")
                     val maxHeight = quality.removeSuffix("p").toIntOrNull()
                     val format = explicitSelector?.takeIf { it.isNotBlank() }
                         ?: if (maxHeight != null) "bv*[height<=$maxHeight]+ba/b[height<=$maxHeight]/bv*+ba/b" else "bv*+ba/b"
                     request.addOption("-f", format)
-                        .addOption("-S", "res,fps")
-                        .addOption("--merge-output-format", "mp4")
+                    val sort = buildList {
+                        add("res")
+                        if (settings.videoFps != "Original") add("fps:" + settings.videoFps.removeSuffix(" fps"))
+                        when (settings.videoCodec) {
+                            "H.264" -> add("vcodec:h264")
+                            "H.265" -> add("vcodec:hevc")
+                            "AV1" -> add("vcodec:av01")
+                        }
+                        when (settings.videoAudioCodec) {
+                            "AAC" -> add("acodec:aac")
+                            "Opus" -> add("acodec:opus")
+                        }
+                    }
+                    request.addOption("-S", sort.joinToString(","))
+                    if (settings.videoFormat != "Auto") request.addOption("--merge-output-format", settings.videoFormat.lowercase())
+                    if (settings.subtitles) request.addOption("--write-subs").addOption("--write-auto-subs").addOption("--sub-langs", "all")
+                    if (settings.videoThumbnail) request.addOption("--embed-thumbnail")
+                    if (settings.videoMetadata) request.addOption("--embed-metadata")
                 }
             }
 
