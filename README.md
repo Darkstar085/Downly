@@ -7,24 +7,12 @@
 Your personal media saver for Android.
 
 <p>
-  <a href="https://github.com/Darkstar085/Downly">
-    <img src="https://img.shields.io/badge/Android-API%2030%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android API 30+">
-  </a>
-  <a href="https://developer.android.com/compose">
-    <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
-  </a>
-  <a href="https://m3.material.io/">
-    <img src="https://img.shields.io/badge/Design-Material%203-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material 3">
-  </a>
-  <a href="https://github.com/Darkstar085/Downly/releases">
-    <img src="https://img.shields.io/github/v/release/Darkstar085/Downly?style=for-the-badge&label=Latest%20Release&color=FF6F00" alt="Latest release">
-  </a>
-  <a href="https://github.com/Darkstar085/Downly/releases">
-    <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FDarkstar085%2FDownly%2Fmain%2F.github%2Fbadges%2Fdownloads.json&style=for-the-badge" alt="APK downloads">
-  </a>
-  <a href="https://github.com/Darkstar085/Downly/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-E91E63?style=for-the-badge" alt="MIT License">
-  </a>
+  <img src="https://img.shields.io/badge/Android-API%2030%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android API 30+">
+  <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
+  <img src="https://img.shields.io/badge/Design-Material%203-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material 3">
+  <img src="https://img.shields.io/github/v/release/Darkstar085/Downly?style=for-the-badge&label=Latest%20Release&color=FF6F00" alt="Latest release">
+  <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FDarkstar085%2FDownly%2Fmain%2F.github%2Fbadges%2Fdownloads.json&style=for-the-badge" alt="APK downloads">
+  <img src="https://img.shields.io/badge/License-MIT-E91E63?style=for-the-badge" alt="MIT License">
 </p>
 
 </div>
@@ -44,8 +32,6 @@ progress and controls available from Android notifications.
 <p align="center">
   <img src=".github/assets/home.png" width="31%" alt="Home screen">
   <img src=".github/assets/media.png" width="31%" alt="Media details">
-  <img src=".github/assets/media_video.png" width="31%" alt="Media video">
-  <img src=".github/assets/media_audio.png" width="31%" alt="Media audio">
 </p>
 
 ### Download History
@@ -78,6 +64,9 @@ progress and controls available from Android notifications.
 - Continue downloads in the background and monitor progress from Android notifications.
 - Pause or cancel active downloads from notifications, and resume paused downloads in the app.
 - Use format fallbacks when a preferred audio or video format is unavailable.
+- Configure video format, codec, frame rate, audio codec, and subtitle downloads.
+- Choose audio format, bitrate, sample rate, and channels, with optional audio normalization.
+- Control thumbnail and metadata embedding for video and audio downloads.
 - See reported file sizes and quality-specific filenames for downloaded media.
 - Get battery-optimization guidance to help background downloads run reliably.
 
@@ -151,33 +140,52 @@ The interface focuses on:
 ## Project Structure
 
 ```text
-app/
+Downly/
+├── .github/
+│   ├── assets/                 # README screenshots and app logo
+│   ├── badges/                 # Download-count badge data
+│   ├── scripts/                # Release, badge, cleanup and debug scripts
+│   └── workflows/              # Release, badge, cleanup and debug workflows
+├── app/
+│   ├── build.gradle.kts
+│   └── src/
+│       ├── main/
+│       │   ├── kotlin/com/sipun/downly/
+│       │   │   ├── core/
+│       │   │   │   ├── notification/
+│       │   │   │   ├── service/
+│       │   │   │   └── update/
+│       │   │   ├── data/
+│       │   │   ├── presentation/
+│       │   │   │   ├── screens/
+│       │   │   │   └── theme/
+│       │   │   ├── runtime/
+│       │   │   ├── ui/
+│       │   │   │   ├── components/
+│       │   │   │   └── update/
+│       │   │   └── utils/
+│       │   └── res/
+│       │       ├── drawable/
+│       │       ├── mipmap-*/
+│       │       ├── raw/
+│       │       ├── values/
+│       │       └── xml/
+│       ├── test/               # Local unit tests
+│       └── androidTest/        # Instrumented tests
+├── gradle/
+│   ├── libs.versions.toml
+│   └── wrapper/
 ├── build.gradle.kts
-└── src/
-    ├── main/
-    │   ├── kotlin/com/sipun/downly/
-    │   │   ├── core/update/
-    │   │   ├── data/
-    │   │   ├── presentation/
-    │   │   │   ├── screens/
-    │   │   │   └── theme/
-    │   │   └── utils/
-    │   └── res/
-    │       ├── drawable/
-    │       ├── mipmap-*/
-    │       ├── raw/
-    │       ├── values/
-    │       └── xml/
-    ├── test/
-    └── androidTest/
+├── gradle.properties
+├── settings.gradle.kts
+├── gradlew
+└── gradlew.bat
 ```
 
-- **UI:** Download, History, and Settings screens are implemented with Jetpack Compose.
-- **Update flow:** GitHub Release lookup, manifest validation, APK digest verification, and
-  installer
-  handling live under `core/update/`.
-- **Local data:** Download state and history are managed in the app; downloaded media stays in
-  app-specific/media storage.
+- **Core:** Download workers, notification handling, and in-app update services.
+- **Presentation:** App state, download queue, duplicate handling, screens, and theme.
+- **Runtime & UI:** Runtime bundle installation, reusable components, and update UI.
+- **Tests:** Unit tests for core, presentation, and utilities, plus Android instrumented tests.
 
 ---
 
