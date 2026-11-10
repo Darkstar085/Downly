@@ -101,9 +101,9 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.kotlinx.serialization.json)
 
-    implementation("io.github.darkstar085.youtubedl-kotlin:library:1.0.1")
-    implementation("io.github.darkstar085.youtubedl-kotlin:ffmpeg:1.0.1")
-    implementation("io.github.darkstar085.youtubedl-kotlin:aria2c:1.0.1")
+    implementation("io.github.darkstar085.youtubedl-kotlin:library:1.0.2")
+    implementation("io.github.darkstar085.youtubedl-kotlin:ffmpeg:1.0.2")
+    implementation("io.github.darkstar085.youtubedl-kotlin:aria2c:1.0.2")
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

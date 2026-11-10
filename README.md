@@ -193,9 +193,9 @@ app/
 
 The app currently resolves these artifacts from `mavenLocal()`, not Maven Central:
 
-- `io.github.darkstar085.youtubedl-kotlin:library:1.0.1`
-- `io.github.darkstar085.youtubedl-kotlin:ffmpeg:1.0.1`
-- `io.github.darkstar085.youtubedl-kotlin:aria2c:1.0.1`
+- `io.github.darkstar085.youtubedl-kotlin:library:1.0.2`
+- `io.github.darkstar085.youtubedl-kotlin:ffmpeg:1.0.2`
+- `io.github.darkstar085.youtubedl-kotlin:aria2c:1.0.2`
 
 Publish the corresponding `library`, `ffmpeg`, and `aria2c` modules from the matching
 `youtubedl-kotlin` source project to your local Maven repository before building. A fresh clone does
