@@ -201,28 +201,73 @@ fun DownloadScreen(
 
         if (state.preview == null && !state.busy) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    InfoCard(
-                        icon = Icons.Rounded.PlayArrow,
-                        title = "Videos",
-                        subtitle = "YouTube & more",
-                        modifier = Modifier.weight(1f)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Supported Formats",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    InfoCard(
-                        icon = Icons.AutoMirrored.Rounded.InsertDriveFile,
-                        title = "Files",
-                        subtitle = "ZIP, APK, PDF...",
-                        modifier = Modifier.weight(1f)
-                    )
-                    InfoCard(
-                        icon = Icons.Rounded.Image,
-                        title = "Images",
-                        subtitle = "JPG, PNG, WEBP...",
-                        modifier = Modifier.weight(1f)
-                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CategoryCard(
+                            icon = Icons.Rounded.PlayArrow,
+                            iconTint = Color(0xFF22C55E),
+                            title = "Videos",
+                            subtitle = "YouTube, MP4, MKV...",
+                            modifier = Modifier.weight(1f)
+                        )
+                        CategoryCard(
+                            icon = Icons.Rounded.MusicNote,
+                            iconTint = Color(0xFF8C55B5),
+                            title = "Music",
+                            subtitle = "MP3, M4A, FLAC...",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CategoryCard(
+                            icon = Icons.Rounded.Image,
+                            iconTint = Color(0xFF14B8A6),
+                            title = "Images",
+                            subtitle = "JPG, PNG, WEBP...",
+                            modifier = Modifier.weight(1f)
+                        )
+                        CategoryCard(
+                            icon = Icons.Rounded.Description,
+                            iconTint = Color(0xFF3B82F6),
+                            title = "Documents",
+                            subtitle = "PDF, DOC, XLS, TXT...",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CategoryCard(
+                            icon = Icons.Rounded.FolderZip,
+                            iconTint = Color(0xFFF59E0B),
+                            title = "Archives",
+                            subtitle = "ZIP, RAR, 7Z, ISO...",
+                            modifier = Modifier.weight(1f)
+                        )
+                        CategoryCard(
+                            icon = Icons.Rounded.Android,
+                            iconTint = Color(0xFF10B981),
+                            title = "Apps & Tools",
+                            subtitle = "APK, EXE, DEB...",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
@@ -748,38 +793,44 @@ fun DownloadScreen(
 }
 
 @Composable
-private fun InfoCard(
+private fun CategoryCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier
 ) {
-    val accentGreen = Color(0xFF22C55E)
     Card(
-        modifier = modifier.height(96.dp),
+        modifier = modifier.height(72.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(10.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(accentGreen.copy(alpha = 0.18f)),
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(iconTint.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = accentGreen, modifier = Modifier.size(16.dp))
+                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
             }
-            Column {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
                     title,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     subtitle,
@@ -787,7 +838,7 @@ private fun InfoCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
             }
         }
