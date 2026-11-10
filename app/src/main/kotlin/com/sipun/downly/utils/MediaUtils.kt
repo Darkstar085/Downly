@@ -335,10 +335,6 @@ fun downloadTotalSize(detail: String): String? {
         .find(detail) ?: return null
     val amount = match.groupValues[1]
     val unit = match.groupValues[2]
-        .replace("KiB", "KB", ignoreCase = true)
-        .replace("MiB", "MB", ignoreCase = true)
-        .replace("GiB", "GB", ignoreCase = true)
-        .replace("TiB", "TB", ignoreCase = true)
     return "$amount $unit"
 }
 

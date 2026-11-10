@@ -24,6 +24,9 @@ object DownloadNotificationHelper {
     internal const val EXTRA_DOWNLOAD_ID = "download_id"
     internal const val EXTRA_OPEN_HISTORY = "open_history"
 
+    private val lastProgressNotifTime = java.util.concurrent.ConcurrentHashMap<Int, Long>()
+    private val lastProgressNotifPercent = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+
     fun createChannel(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (manager.getNotificationChannel(CHANNEL_ID) == null) {
@@ -52,9 +55,19 @@ object DownloadNotificationHelper {
         DownloadWorkManager.notifyProgress(notificationId, percent, detail)
         if (!canNotify(context)) return
 
-        runCatching {
-            context.getSystemService(NotificationManager::class.java)
-                .notify(notificationId, buildProgressNotification(context, notificationId, title, percent, detail, downloadId))
+        val now = System.currentTimeMillis()
+        val lastTime = lastProgressNotifTime[notificationId] ?: 0L
+
+        val shouldNotify = percent <= 0 || percent >= 100 ||
+            ((now - lastTime) >= 1000L)
+
+        if (shouldNotify) {
+            lastProgressNotifTime[notificationId] = now
+            lastProgressNotifPercent[notificationId] = percent
+            runCatching {
+                context.getSystemService(NotificationManager::class.java)
+                    .notify(notificationId, buildProgressNotification(context, notificationId, title, percent, detail, downloadId))
+            }
         }
     }
 
@@ -100,6 +113,8 @@ object DownloadNotificationHelper {
     }
 
     fun showPaused(context: Context, notificationId: Int, title: String, downloadId: String?) {
+        lastProgressNotifTime.remove(notificationId)
+        lastProgressNotifPercent.remove(notificationId)
         if (!canNotify(context)) return
         createChannel(context)
         val intent = Intent(context, MainActivity::class.java).apply {
@@ -141,6 +156,8 @@ object DownloadNotificationHelper {
         notificationId: Int,
         title: String
     ) {
+        lastProgressNotifTime.remove(notificationId)
+        lastProgressNotifPercent.remove(notificationId)
         if (!canNotify(context)) return
         createChannel(context)
 
@@ -175,6 +192,8 @@ object DownloadNotificationHelper {
         title: String,
         error: String
     ) {
+        lastProgressNotifTime.remove(notificationId)
+        lastProgressNotifPercent.remove(notificationId)
         if (!canNotify(context)) return
         createChannel(context)
 
@@ -204,6 +223,8 @@ object DownloadNotificationHelper {
     }
 
     fun cancel(context: Context, notificationId: Int) {
+        lastProgressNotifTime.remove(notificationId)
+        lastProgressNotifPercent.remove(notificationId)
         runCatching {
             context.getSystemService(NotificationManager::class.java).cancel(notificationId)
         }

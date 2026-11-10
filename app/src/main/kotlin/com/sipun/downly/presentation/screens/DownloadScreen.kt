@@ -770,9 +770,8 @@ private fun AdvancedDownloadSettings(
     onSettingsChange: (com.sipun.downly.data.DownloadSettings) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedTab by remember(mode) { mutableStateOf(if (mode == MediaMode.AUDIO) 1 else 0) }
-    val showVideo = mode == MediaMode.VIDEO && selectedTab == 0
-    val showAudio = mode == MediaMode.AUDIO || selectedTab == 1
+    val showVideo = mode == MediaMode.VIDEO
+    val showAudio = mode == MediaMode.AUDIO
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -793,49 +792,41 @@ private fun AdvancedDownloadSettings(
                     Icon(if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, contentDescription = if (expanded) "Collapse advanced options" else "Expand advanced options")
                 }
             }
-            if (expanded) {
-                if (mode == MediaMode.VIDEO) {
-                    TabRow(selectedTabIndex = selectedTab) {
-                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Video") })
-                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Audio") })
-                    }
-                } else {
-                    Text("Audio", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            if (expanded && showVideo) {
+                Text("Video", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                SettingRow("Container", settings.videoFormat, listOf("Auto", "MP4", "MKV", "WebM")) {
+                    onSettingsChange(settings.copy(videoFormat = it))
                 }
-                if (showVideo) {
-                    SettingRow("Container", settings.videoFormat, listOf("Auto", "MP4", "MKV", "WebM")) {
-                        onSettingsChange(settings.copy(videoFormat = it))
-                    }
-                    SettingRow("Video codec", settings.videoCodec, listOf("Auto", "H.264", "H.265", "AV1")) {
-                        onSettingsChange(settings.copy(videoCodec = it))
-                    }
-                    SettingRow("FPS preference", settings.videoFps, listOf("Original", "30 fps", "60 fps")) {
-                        onSettingsChange(settings.copy(videoFps = it))
-                    }
-                    SettingRow("Audio codec", settings.videoAudioCodec, listOf("Original", "AAC", "Opus")) {
-                        onSettingsChange(settings.copy(videoAudioCodec = it))
-                    }
-                    SettingToggleRow("Subtitles", settings.subtitles) { onSettingsChange(settings.copy(subtitles = it)) }
-                    SettingToggleRow("Embed thumbnail", settings.videoThumbnail) { onSettingsChange(settings.copy(videoThumbnail = it)) }
-                    SettingToggleRow("Embed metadata", settings.videoMetadata) { onSettingsChange(settings.copy(videoMetadata = it)) }
+                SettingRow("Video codec", settings.videoCodec, listOf("Auto", "H.264", "H.265", "AV1")) {
+                    onSettingsChange(settings.copy(videoCodec = it))
                 }
-                if (showAudio) {
-                    SettingRow("Format", settings.audioFormat, listOf("MP3", "M4A", "AAC", "FLAC", "WAV", "Opus")) {
-                        onSettingsChange(settings.copy(audioFormat = it))
-                    }
-                    SettingRow("Bitrate", settings.audioBitrate, listOf("96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps")) {
-                        onSettingsChange(settings.copy(audioBitrate = it))
-                    }
-                    SettingRow("Sample rate", settings.audioSampleRate, listOf("Original", "44.1 kHz", "48 kHz")) {
-                        onSettingsChange(settings.copy(audioSampleRate = it))
-                    }
-                    SettingRow("Channels", settings.audioChannels, listOf("Original", "Stereo", "Mono")) {
-                        onSettingsChange(settings.copy(audioChannels = it))
-                    }
-                    SettingToggleRow("Normalize volume", settings.normalizeAudio) { onSettingsChange(settings.copy(normalizeAudio = it)) }
-                    SettingToggleRow("Embed thumbnail", settings.audioThumbnail) { onSettingsChange(settings.copy(audioThumbnail = it)) }
-                    SettingToggleRow("Embed metadata", settings.audioMetadata) { onSettingsChange(settings.copy(audioMetadata = it)) }
+                SettingRow("FPS preference", settings.videoFps, listOf("Original", "30 fps", "60 fps")) {
+                    onSettingsChange(settings.copy(videoFps = it))
                 }
+                SettingRow("Audio codec", settings.videoAudioCodec, listOf("Original", "AAC", "Opus")) {
+                    onSettingsChange(settings.copy(videoAudioCodec = it))
+                }
+                SettingToggleRow("Subtitles", settings.subtitles) { onSettingsChange(settings.copy(subtitles = it)) }
+                SettingToggleRow("Embed thumbnail", settings.videoThumbnail) { onSettingsChange(settings.copy(videoThumbnail = it)) }
+                SettingToggleRow("Embed metadata", settings.videoMetadata) { onSettingsChange(settings.copy(videoMetadata = it)) }
+            }
+            if (expanded && showAudio) {
+                Text("Audio", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                SettingRow("Format", settings.audioFormat, listOf("MP3", "M4A", "AAC", "FLAC", "WAV", "Opus")) {
+                    onSettingsChange(settings.copy(audioFormat = it))
+                }
+                SettingRow("Bitrate", settings.audioBitrate, listOf("96 kbps", "128 kbps", "192 kbps", "256 kbps", "320 kbps")) {
+                    onSettingsChange(settings.copy(audioBitrate = it))
+                }
+                SettingRow("Sample rate", settings.audioSampleRate, listOf("Original", "44.1 kHz", "48 kHz")) {
+                    onSettingsChange(settings.copy(audioSampleRate = it))
+                }
+                SettingRow("Channels", settings.audioChannels, listOf("Original", "Stereo", "Mono")) {
+                    onSettingsChange(settings.copy(audioChannels = it))
+                }
+                SettingToggleRow("Normalize volume", settings.normalizeAudio) { onSettingsChange(settings.copy(normalizeAudio = it)) }
+                SettingToggleRow("Embed thumbnail", settings.audioThumbnail) { onSettingsChange(settings.copy(audioThumbnail = it)) }
+                SettingToggleRow("Embed metadata", settings.audioMetadata) { onSettingsChange(settings.copy(audioMetadata = it)) }
             }
         }
     }
