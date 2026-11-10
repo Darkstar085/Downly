@@ -2,7 +2,7 @@ package com.sipun.downly.data
 
 import java.util.UUID
 
-enum class MediaMode { VIDEO, AUDIO }
+enum class MediaMode { VIDEO, AUDIO, FILE }
 enum class DownloadStatus { QUEUED, DOWNLOADING, PAUSED, COMPLETE, FAILED, CANCELLED }
 
 data class DownloadRecord(
@@ -39,13 +39,19 @@ data class MediaOptions(
 
 data class MediaPreview(
     val title: String,
-    val uploader: String,
-    val duration: String,
+    val uploader: String = "",
+    val duration: String = "",
     val url: String,
     val thumbnailUrl: String? = null,
     val durationSeconds: Int = 0,
     val qualityOptions: List<QualityOption> = emptyList(),
-    val audioOptions: List<AudioOption> = emptyList()
+    val audioOptions: List<AudioOption> = emptyList(),
+    val isDirectFile: Boolean = false,
+    val mimeType: String = "",
+    val fileSize: Long? = null,
+    val fileExtension: String = "",
+    val directFileName: String = "",
+    val fileCategory: String = "FILE"
 )
 
 data class DuplicateDownloadPrompt(
@@ -73,5 +79,13 @@ data class ScreenState(
     val duplicatePrompt: DuplicateDownloadPrompt? = null,
     val duplicateReplacementInProgress: Boolean = false,
     val themeMode: String = "System",
-    val dynamicColor: Boolean = false
+    val dynamicColor: Boolean = false,
+    val customFileName: String = "",
+    val downloadLocation: String = "Downloads/Downly",
+    val advancedExpanded: Boolean = false,
+    val qualityDropdownExpanded: Boolean = false,
+    val historySearchQuery: String = "",
+    val isSearchActive: Boolean = false,
+    val historyFilter: String = "ALL"
 )
+

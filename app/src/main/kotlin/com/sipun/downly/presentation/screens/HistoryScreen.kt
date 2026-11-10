@@ -60,19 +60,25 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class HistoryFilter { ALL, VIDEO, AUDIO }
+private enum class HistoryFilter { ALL, VIDEO, AUDIO, FILES }
 
 @Composable
 fun ActivityScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier) {
     var filter by remember { mutableStateOf(HistoryFilter.ALL) }
+    val searchQuery = state.historySearchQuery.trim().lowercase(Locale.ROOT)
     val visibleRecords = state.history.filter { record ->
-        val audio = isAudioRecord(record)
+        val isAudio = isAudioRecord(record)
+        val isFile = record.mode == com.sipun.downly.data.MediaMode.FILE
         val matchesFilter = when (filter) {
             HistoryFilter.ALL -> true
-            HistoryFilter.VIDEO -> !audio
-            HistoryFilter.AUDIO -> audio
+            HistoryFilter.VIDEO -> !isAudio && !isFile
+            HistoryFilter.AUDIO -> isAudio
+            HistoryFilter.FILES -> isFile || (!isAudio && record.filePath?.contains(".") == true)
         }
-        matchesFilter
+        val matchesSearch = searchQuery.isBlank() ||
+            record.title.lowercase(Locale.ROOT).contains(searchQuery) ||
+            record.url.lowercase(Locale.ROOT).contains(searchQuery)
+        matchesFilter && matchesSearch
     }
 
     LazyColumn(
@@ -80,11 +86,33 @@ fun ActivityScreen(state: ScreenState, vm: DownlyViewModel, modifier: Modifier) 
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        if (state.isSearchActive) {
+            item {
+                OutlinedTextField(
+                    value = state.historySearchQuery,
+                    onValueChange = vm::setHistorySearchQuery,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Search downloads…") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            vm.setHistorySearchQuery("")
+                            vm.setIsSearchActive(false)
+                        }) {
+                            Icon(Icons.Rounded.Close, contentDescription = "Close search")
+                        }
+                    }
+                )
+            }
+        }
+
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                HistoryFilterChip("All (" + state.history.size + ")", filter == HistoryFilter.ALL, Modifier.weight(1f)) { filter = HistoryFilter.ALL }
-                HistoryFilterChip("Videos (" + state.history.count { !isAudioRecord(it) } + ")", filter == HistoryFilter.VIDEO, Modifier.weight(1f), Icons.Rounded.VideoFile) { filter = HistoryFilter.VIDEO }
-                HistoryFilterChip("Audio (" + state.history.count { isAudioRecord(it) } + ")", filter == HistoryFilter.AUDIO, Modifier.weight(1f), Icons.Rounded.MusicNote) { filter = HistoryFilter.AUDIO }
+                HistoryFilterChip("All", filter == HistoryFilter.ALL, Modifier.weight(1f)) { filter = HistoryFilter.ALL }
+                HistoryFilterChip("Video", filter == HistoryFilter.VIDEO, Modifier.weight(1f), Icons.Rounded.VideoFile) { filter = HistoryFilter.VIDEO }
+                HistoryFilterChip("Audio", filter == HistoryFilter.AUDIO, Modifier.weight(1f), Icons.Rounded.MusicNote) { filter = HistoryFilter.AUDIO }
+                HistoryFilterChip("Files", filter == HistoryFilter.FILES, Modifier.weight(1f), Icons.AutoMirrored.Rounded.InsertDriveFile) { filter = HistoryFilter.FILES }
             }
         }
         if (state.history.any { it.status == DownloadStatus.COMPLETE || it.status == DownloadStatus.FAILED || it.status == DownloadStatus.CANCELLED }) {
@@ -169,25 +197,26 @@ private fun HistoryFilterChip(
     icon: ImageVector? = null,
     onClick: () -> Unit
 ) {
+    val accentGreen = androidx.compose.ui.graphics.Color(0xFF22C55E)
     Surface(
-        onClick = onClick, modifier = modifier.height(48.dp), shape = RoundedCornerShape(50),
-        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-        border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        onClick = onClick, modifier = modifier.height(40.dp), shape = RoundedCornerShape(50),
+        color = if (selected) accentGreen else MaterialTheme.colorScheme.surfaceContainerLow,
+        border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (icon != null) {
                 Icon(icon, contentDescription = null,
-                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(17.dp))
-                Spacer(Modifier.width(5.dp))
+                    tint = if (selected) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
             }
-            Text(label, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge)
+            Text(label, color = if (selected) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -277,7 +306,17 @@ fun DownloadCard(record: DownloadRecord, vm: DownlyViewModel, duplicatePrompt: D
                 }
             } else if (record.status == DownloadStatus.QUEUED || record.status == DownloadStatus.DOWNLOADING) {
                 LinearProgressIndicator(progress = { record.progress }, modifier = Modifier.fillMaxWidth(), color = colorResource(R.color.downly_accent))
-                Text(record.progress.times(100).toInt().toString() + "% · " + record.detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val cleanedDetail = record.detail
+                    .replace("KiB", "KB")
+                    .replace("MiB", "MB")
+                    .replace("GiB", "GB")
+                    .replace("TiB", "TB")
+                val progressText = if (cleanedDetail.contains("%")) {
+                    cleanedDetail
+                } else {
+                    "${(record.progress * 100).toInt()}% · $cleanedDetail"
+                }
+                Text(progressText, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedButton(
                     onClick = { vm.pause(record) },
                     modifier = Modifier.align(Alignment.End),

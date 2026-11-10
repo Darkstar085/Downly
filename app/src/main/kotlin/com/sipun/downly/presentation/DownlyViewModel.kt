@@ -147,6 +147,12 @@ class DownlyViewModel : ViewModel() {
     fun setMode(value: MediaMode) = mutate { copy(mode = value) }
     fun setQuality(value: String) = mutate { copy(quality = value) }
     fun setTab(value: Int) = mutate { copy(tab = value) }
+    fun setCustomFileName(value: String) = mutate { copy(customFileName = value) }
+    fun setAdvancedExpanded(value: Boolean) = mutate { copy(advancedExpanded = value) }
+    fun setQualityDropdownExpanded(value: Boolean) = mutate { copy(qualityDropdownExpanded = value) }
+    fun setHistorySearchQuery(value: String) = mutate { copy(historySearchQuery = value) }
+    fun setIsSearchActive(value: Boolean) = mutate { copy(isSearchActive = value) }
+    fun setHistoryFilter(value: String) = mutate { copy(historyFilter = value) }
 
     fun setThemeMode(value: String) {
         mutate { copy(themeMode = value) }
@@ -265,19 +271,45 @@ class DownlyViewModel : ViewModel() {
 
     fun fetchInfo() {
         val current = _state.value
-        val url = current.url.trim()
+        val rawUrl = current.url.trim()
+        val url = com.sipun.downly.utils.normalizeUrl(rawUrl)
         if (!isValidUrl(url)) {
             mutate { copy(message = "Paste a valid http/https URL first.") }
             return
         }
+        mutate { copy(url = url) }
         if (!current.initialized) {
             initialize()
             mutate { copy(message = "Downloader is starting. Please tap Fetch info again shortly.") }
             return
         }
-        mutate { copy(busy = true, message = "Fetching media information…", preview = null) }
+        mutate { copy(busy = true, message = "Analyzing link and getting download options…", preview = null) }
         worker.execute {
             try {
+                val directProbe = com.sipun.downly.utils.probeDirectFile(url)
+                if (directProbe != null) {
+                    val preview = MediaPreview(
+                        title = directProbe.fileName,
+                        url = url,
+                        isDirectFile = true,
+                        mimeType = directProbe.mimeType,
+                        fileSize = directProbe.fileSize,
+                        fileExtension = directProbe.extension,
+                        directFileName = directProbe.fileName,
+                        fileCategory = directProbe.category
+                    )
+                    mutate {
+                        copy(
+                            busy = false,
+                            preview = preview,
+                            mode = MediaMode.FILE,
+                            customFileName = directProbe.fileName,
+                            message = "Direct file link ready"
+                        )
+                    }
+                    return@execute
+                }
+
                 val info: VideoInfo = YoutubeDL.getInfo(url)
                 val mediaOptions = buildMediaOptions(info.formats.orEmpty(), info.duration)
                 val preview = MediaPreview(
@@ -288,17 +320,45 @@ class DownlyViewModel : ViewModel() {
                     thumbnailUrl = info.thumbnail?.takeIf { it.startsWith("https://") || it.startsWith("http://") },
                     durationSeconds = info.duration,
                     qualityOptions = mediaOptions.qualityOptions,
-                    audioOptions = mediaOptions.audioOptions
+                    audioOptions = mediaOptions.audioOptions,
+                    isDirectFile = false
                 )
-                mutate { copy(busy = false, preview = preview, recommendedQuality = recommendQuality(preview.qualityOptions, connectionType), message = "Media details ready") }
+                mutate { copy(busy = false, preview = preview, mode = MediaMode.VIDEO, recommendedQuality = recommendQuality(preview.qualityOptions, connectionType), message = "Media details ready") }
             } catch (error: Exception) {
-                mutate { copy(busy = false, message = friendlyError(error)) }
+                val fallbackProbe = com.sipun.downly.utils.probeDirectFile(url)
+                if (fallbackProbe != null) {
+                    val preview = MediaPreview(
+                        title = fallbackProbe.fileName,
+                        url = url,
+                        isDirectFile = true,
+                        mimeType = fallbackProbe.mimeType,
+                        fileSize = fallbackProbe.fileSize,
+                        fileExtension = fallbackProbe.extension,
+                        directFileName = fallbackProbe.fileName,
+                        fileCategory = fallbackProbe.category
+                    )
+                    mutate {
+                        copy(
+                            busy = false,
+                            preview = preview,
+                            mode = MediaMode.FILE,
+                            customFileName = fallbackProbe.fileName,
+                            message = "Direct file link ready"
+                        )
+                    }
+                } else {
+                    mutate { copy(busy = false, message = friendlyError(error)) }
+                }
             }
         }
     }
 
     fun startBestDownload() {
         val current = _state.value
+        if (current.preview?.isDirectFile == true) {
+            startDownload()
+            return
+        }
         val selectedQuality = when (current.mode) {
             MediaMode.VIDEO -> current.preview?.qualityOptions
                 ?.maxByOrNull { it.height }
@@ -307,6 +367,7 @@ class DownlyViewModel : ViewModel() {
             MediaMode.AUDIO -> current.preview?.audioOptions
                 ?.let { recommendAudioOption(it) }
                 ?.let { "audio:${it.formatId}" }
+            MediaMode.FILE -> "Best"
         }
         startDownload(selectedQuality)
     }
@@ -329,10 +390,15 @@ class DownlyViewModel : ViewModel() {
             mutate { copy(message = "This link is already active.") }
             return
         }
+        val selectedTitle = if (current.preview?.isDirectFile == true) {
+            current.customFileName.ifBlank { current.preview.title }
+        } else {
+            current.preview?.title ?: Uri.parse(url).host.orEmpty()
+        }
         val selectedQuality = qualityOverride ?: if (current.mode == MediaMode.VIDEO && current.quality == "Smart") current.recommendedQuality else current.quality
         val record = DownloadRecord(
             url = url,
-            title = current.preview?.title ?: Uri.parse(url).host.orEmpty(),
+            title = selectedTitle,
             status = DownloadStatus.QUEUED,
             mode = current.mode,
             quality = selectedQuality
@@ -349,7 +415,7 @@ class DownlyViewModel : ViewModel() {
                 history = enqueueDownloadRecord(current.history, record),
                 url = "",
                 preview = null,
-                tab = 0,
+                tab = 1,
                 message = "Added to download queue"
             )
             _state.value = next
@@ -424,32 +490,39 @@ class DownlyViewModel : ViewModel() {
     private fun executeDownload(record: DownloadRecord, mode: MediaMode, quality: String, connectionType: String) {
         if (cancelledIds.remove(record.id)) return
         try {
-            setRecord(record.id) { copy(status = DownloadStatus.DOWNLOADING, detail = "Starting yt-dlp…") }
+            setRecord(record.id) { copy(status = DownloadStatus.DOWNLOADING, detail = "Starting download…") }
             val context = appContext ?: error("Application context is unavailable.")
             val root = File(context.getExternalFilesDir(null) ?: context.filesDir, "Downly")
             val folder = File(root, record.id)
             if (!folder.exists() && !folder.mkdirs()) error("Unable to create download folder.")
             val request = YoutubeDLRequest(record.url)
-                .addOption("-o", File(folder, "%(title).140B - %(id)s.%(ext)s").absolutePath)
                 .addOption("--newline")
                 .addOption("--continue")
-                .addOption("--no-playlist")
-            if (mode == MediaMode.AUDIO) {
-                val audioFormatId = quality.takeIf { it.startsWith("audio:") }?.removePrefix("audio:")
-                val formatSpec = if (!audioFormatId.isNullOrBlank()) "$audioFormatId/ba/b" else "ba/b"
-                request.addOption("-f", formatSpec)
-                    .addOption("-x")
-                    .addOption("--audio-format", "mp3")
-                    .addOption("--audio-quality", if (connectionType == "Mobile data") "5" else "0")
+
+            if (mode == MediaMode.FILE) {
+                val outputFileName = record.title.ifBlank { "download-${System.currentTimeMillis()}" }
+                request.addOption("-o", File(folder, outputFileName).absolutePath)
             } else {
-                val explicitSelector = quality.takeIf { it.startsWith("video:") }?.removePrefix("video:")
-                val maxHeight = quality.removeSuffix("p").toIntOrNull()
-                val format = explicitSelector?.takeIf { it.isNotBlank() }
-                    ?: if (maxHeight != null) "bv*[height<=$maxHeight]+ba/b[height<=$maxHeight]/bv*+ba/b" else "bv*+ba/b"
-                request.addOption("-f", format)
-                    .addOption("-S", "res,fps")
-                    .addOption("--merge-output-format", "mp4")
+                request.addOption("-o", File(folder, "%(title).140B - %(id)s.%(ext)s").absolutePath)
+                    .addOption("--no-playlist")
+                if (mode == MediaMode.AUDIO) {
+                    val audioFormatId = quality.takeIf { it.startsWith("audio:") }?.removePrefix("audio:")
+                    val formatSpec = if (!audioFormatId.isNullOrBlank()) "$audioFormatId/ba/b" else "ba/b"
+                    request.addOption("-f", formatSpec)
+                        .addOption("-x")
+                        .addOption("--audio-format", "mp3")
+                        .addOption("--audio-quality", if (connectionType == "Mobile data") "5" else "0")
+                } else {
+                    val explicitSelector = quality.takeIf { it.startsWith("video:") }?.removePrefix("video:")
+                    val maxHeight = quality.removeSuffix("p").toIntOrNull()
+                    val format = explicitSelector?.takeIf { it.isNotBlank() }
+                        ?: if (maxHeight != null) "bv*[height<=$maxHeight]+ba/b[height<=$maxHeight]/bv*+ba/b" else "bv*+ba/b"
+                    request.addOption("-f", format)
+                        .addOption("-S", "res,fps")
+                        .addOption("--merge-output-format", "mp4")
+                }
             }
+
             if (cancelledIds.remove(record.id)) return
             val notifId = record.id.hashCode()
             DownloadNotificationHelper.showProgress(
@@ -474,10 +547,10 @@ class DownlyViewModel : ViewModel() {
                 file.isFile && !file.name.endsWith(".part") &&
                     !file.name.endsWith(".ytdl") && !file.name.endsWith(".temp")
             }?.maxByOrNull { it.lastModified() }
-                ?: throw IOException("yt-dlp finished, but no completed output file was found in its download directory.")
+                ?: throw IOException("Download finished, but output file was not found.")
             val mediaId = extractMediaId(saved.name)
             val mediaIdentity = mediaId?.let { mediaIdentityKey(it, mode, quality) }
-            val normalized = normalizeDownloadedFileName(saved, record.title, mode, quality)
+            val normalized = if (mode == MediaMode.FILE) saved.name else normalizeDownloadedFileName(saved, record.title, mode, quality)
             val outputFile = if (normalized != saved.name) {
                 val renamed = File(saved.parentFile, normalized)
                 if (saved.renameTo(renamed)) renamed else saved
@@ -568,10 +641,10 @@ class DownlyViewModel : ViewModel() {
     }
 
     private fun findExistingMedia(context: Context, fileName: String, mode: MediaMode, identityKey: String?): Pair<Uri, String>? {
-        val relativeDirectory = if (mode == MediaMode.AUDIO) {
-            Environment.DIRECTORY_DOWNLOADS + "/Downly/Music/"
-        } else {
-            Environment.DIRECTORY_DOWNLOADS + "/Downly/Videos/"
+        val relativeDirectory = when (mode) {
+            MediaMode.AUDIO -> Environment.DIRECTORY_DOWNLOADS + "/Downly/Music/"
+            MediaMode.VIDEO -> Environment.DIRECTORY_DOWNLOADS + "/Downly/Videos/"
+            MediaMode.FILE -> Environment.DIRECTORY_DOWNLOADS + "/Downly/"
         }
         val altDirectory = relativeDirectory.trimEnd('/')
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
@@ -699,19 +772,33 @@ class DownlyViewModel : ViewModel() {
 
     private fun publishToMediaStore(context: Context, source: File, mode: MediaMode, identityKey: String?): String {
         val resolver = context.contentResolver
-        val relativeDirectory = if (mode == MediaMode.AUDIO) {
-            Environment.DIRECTORY_DOWNLOADS + "/Downly/Music/"
-        } else {
-            Environment.DIRECTORY_DOWNLOADS + "/Downly/Videos/"
+        val relativeDirectory = when (mode) {
+            MediaMode.AUDIO -> Environment.DIRECTORY_DOWNLOADS + "/Downly/Music/"
+            MediaMode.VIDEO -> Environment.DIRECTORY_DOWNLOADS + "/Downly/Videos/"
+            MediaMode.FILE -> Environment.DIRECTORY_DOWNLOADS + "/Downly/"
         }
-        val mimeType = if (mode == MediaMode.AUDIO) {
-            "audio/mpeg"
-        } else {
-            when (source.extension.lowercase()) {
-                "webm" -> "video/webm"
-                "mkv" -> "video/x-matroska"
-                "mov" -> "video/quicktime"
-                else -> "video/mp4"
+        val mimeType = when (mode) {
+            MediaMode.AUDIO -> "audio/mpeg"
+            MediaMode.FILE -> {
+                when (source.extension.lowercase()) {
+                    "apk" -> "application/vnd.android.package-archive"
+                    "zip" -> "application/zip"
+                    "pdf" -> "application/pdf"
+                    "png" -> "image/png"
+                    "jpg", "jpeg" -> "image/jpeg"
+                    "webp" -> "image/webp"
+                    "mp4" -> "video/mp4"
+                    "mp3" -> "audio/mpeg"
+                    else -> "application/octet-stream"
+                }
+            }
+            MediaMode.VIDEO -> {
+                when (source.extension.lowercase()) {
+                    "webm" -> "video/webm"
+                    "mkv" -> "video/x-matroska"
+                    "mov" -> "video/quicktime"
+                    else -> "video/mp4"
+                }
             }
         }
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI

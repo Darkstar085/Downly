@@ -335,17 +335,21 @@ fun downloadTotalSize(detail: String): String? {
         .find(detail) ?: return null
     val amount = match.groupValues[1]
     val unit = match.groupValues[2]
+        .replace("KiB", "KB", ignoreCase = true)
+        .replace("MiB", "MB", ignoreCase = true)
+        .replace("GiB", "GB", ignoreCase = true)
+        .replace("TiB", "TB", ignoreCase = true)
     return "$amount $unit"
 }
 
 fun formatBytes(bytes: Long): String = when {
     bytes >= 1_073_741_824L -> {
-        val gib = bytes / 1_073_741_824.0
-        if (gib >= 10.0) String.format(Locale.US, "%.1f GiB", gib)
-        else String.format(Locale.US, "%.2f GiB", gib)
+        val gb = bytes / 1_073_741_824.0
+        if (gb >= 10.0) String.format(Locale.US, "%.1f GB", gb)
+        else String.format(Locale.US, "%.2f GB", gb)
     }
-    bytes >= 1_048_576L -> String.format(Locale.US, "%.1f MiB", bytes / 1_048_576.0)
-    bytes >= 1024L -> String.format(Locale.US, "%.0f KiB", bytes / 1024.0)
+    bytes >= 1_048_576L -> String.format(Locale.US, "%.1f MB", bytes / 1_048_576.0)
+    bytes >= 1024L -> String.format(Locale.US, "%.0f KB", bytes / 1024.0)
     else -> "$bytes B"
 }
 
@@ -360,9 +364,34 @@ object DownlyContextRef {
     var context: Context? = null
 }
 
+fun normalizeUrl(value: String): String {
+    var trimmed = value.trim()
+    if (trimmed.isBlank()) return ""
+    trimmed = trimmed.replace(Regex("(\\d):(\\d)"), "$1$2")
+    if (trimmed.startsWith("https//")) trimmed = "https://" + trimmed.removePrefix("https//")
+    else if (trimmed.startsWith("http//")) trimmed = "http://" + trimmed.removePrefix("http//")
+    else if (trimmed.startsWith("ttps://")) trimmed = "https://" + trimmed.removePrefix("ttps://")
+    else if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+        trimmed = "https://" + trimmed
+    }
+    val knownExts = listOf(".apk", ".zip", ".pdf", ".mp4", ".mp3", ".png", ".jpg", ".jpeg", ".webp", ".md")
+    for (ext in knownExts) {
+        val idx = trimmed.indexOf(ext, ignoreCase = true)
+        if (idx > 0) {
+            val after = trimmed.substring(idx + ext.length)
+            if (after.length in 1..2 && after.all { it.isLetter() }) {
+                trimmed = trimmed.substring(0, idx + ext.length)
+                break
+            }
+        }
+    }
+    return trimmed
+}
+
 fun isValidUrl(value: String): Boolean {
-    val uri = runCatching { Uri.parse(value) }.getOrNull() ?: return false
-    return uri.scheme in setOf("http", "https") && !uri.host.isNullOrBlank()
+    val normalized = normalizeUrl(value)
+    val uri = runCatching { Uri.parse(normalized) }.getOrNull() ?: return false
+    return uri.scheme in setOf("http", "https") && !uri.host.isNullOrBlank() && uri.host!!.contains(".")
 }
 
 fun formatDuration(seconds: Int): String {
@@ -418,8 +447,108 @@ fun requestIgnoreBatteryOptimizations(context: Context) {
 fun cleanYtDlpLine(line: String): String {
     return line
         .replace(Regex("^\\[download\\]\\s*"), "")
+        .replace("KiB", "KB")
+        .replace("MiB", "MB")
+        .replace("GiB", "GB")
+        .replace("TiB", "TB")
         .replace(Regex("\\s+"), " ")
         .trim()
 }
+
+data class DirectFileProbe(
+    val fileName: String,
+    val mimeType: String,
+    val fileSize: Long?,
+    val extension: String,
+    val category: String
+)
+
+fun probeDirectFile(urlStr: String): DirectFileProbe? {
+    return runCatching {
+        val parsedUrl = URL(urlStr)
+        val rawFileName = parsedUrl.path.substringAfterLast('/').takeIf { it.isNotBlank() } ?: "file"
+        val ext = rawFileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
+
+        val knownDirectExtensions = setOf(
+            "apk", "zip", "pdf", "rar", "7z", "tar", "gz", "iso", "exe", "dmg",
+            "png", "jpg", "jpeg", "webp", "gif", "svg", "bmp",
+            "mp4", "mkv", "avi", "mov", "webm",
+            "mp3", "wav", "aac", "flac", "ogg", "m4a"
+        )
+
+        val isExtensionMatch = ext in knownDirectExtensions
+
+        var conn: HttpURLConnection? = null
+        var mimeType = ""
+        var contentLength: Long? = null
+        var finalFileName = rawFileName
+
+        try {
+            conn = (parsedUrl.openConnection() as HttpURLConnection).apply {
+                requestMethod = "HEAD"
+                connectTimeout = 3000
+                readTimeout = 3000
+                instanceFollowRedirects = true
+            }
+            val code = conn.responseCode
+            if (code in 200..399) {
+                mimeType = conn.contentType.orEmpty().substringBefore(";").trim()
+                val len = conn.contentLengthLong
+                if (len > 0) contentLength = len
+
+                val disposition = conn.getHeaderField("Content-Disposition").orEmpty()
+                if (disposition.contains("filename=", ignoreCase = true)) {
+                    val extracted = disposition.substringAfter("filename=")
+                        .replace("\"", "")
+                        .trim()
+                    if (extracted.isNotBlank()) finalFileName = extracted
+                }
+            }
+        } catch (_: Exception) {} finally {
+            conn?.disconnect()
+        }
+
+        val effectiveExt = finalFileName.substringAfterLast('.', ext).lowercase(Locale.ROOT)
+        val isMimeDirect = mimeType.isNotBlank() && (
+            mimeType.startsWith("application/") ||
+            mimeType.startsWith("image/") ||
+            mimeType.startsWith("audio/") ||
+            mimeType.startsWith("video/")
+        ) && !mimeType.contains("html") && !mimeType.contains("json")
+
+        if (!isExtensionMatch && !isMimeDirect) return null
+
+        val category = when {
+            effectiveExt == "apk" || mimeType.contains("vnd.android.package-archive") -> "APK"
+            effectiveExt in setOf("zip", "rar", "7z", "tar", "gz") || mimeType.contains("zip") || mimeType.contains("compressed") -> "ZIP"
+            effectiveExt == "pdf" || mimeType.contains("pdf") -> "PDF"
+            mimeType.startsWith("image/") || effectiveExt in setOf("png", "jpg", "jpeg", "webp", "gif") -> effectiveExt.uppercase(Locale.ROOT).ifBlank { "IMAGE" }
+            mimeType.startsWith("video/") || effectiveExt in setOf("mp4", "mkv", "mov", "webm", "avi") -> effectiveExt.uppercase(Locale.ROOT).ifBlank { "VIDEO" }
+            mimeType.startsWith("audio/") || effectiveExt in setOf("mp3", "m4a", "wav", "flac", "aac", "ogg") -> effectiveExt.uppercase(Locale.ROOT).ifBlank { "AUDIO" }
+            else -> effectiveExt.uppercase(Locale.ROOT).ifBlank { "FILE" }
+        }
+
+        val defaultMime = when (effectiveExt) {
+            "apk" -> "application/vnd.android.package-archive"
+            "zip" -> "application/zip"
+            "pdf" -> "application/pdf"
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            "webp" -> "image/webp"
+            "mp4" -> "video/mp4"
+            "mp3" -> "audio/mpeg"
+            else -> if (mimeType.isNotBlank()) mimeType else "application/octet-stream"
+        }
+
+        DirectFileProbe(
+            fileName = finalFileName,
+            mimeType = if (mimeType.isNotBlank()) mimeType else defaultMime,
+            fileSize = contentLength,
+            extension = effectiveExt,
+            category = category
+        )
+    }.getOrNull()
+}
+
 
 

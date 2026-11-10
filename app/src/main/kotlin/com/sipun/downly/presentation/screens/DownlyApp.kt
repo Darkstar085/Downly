@@ -31,6 +31,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Folder
@@ -224,11 +227,21 @@ fun DownlyApp(
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 TopAppBar(
+                    navigationIcon = {
+                        if (state.tab != 0) {
+                            IconButton(onClick = { vm.setTab(0) }) {
+                                Icon(
+                                    Icons.AutoMirrored.Rounded.ArrowBack,
+                                    contentDescription = "Back"
+                                )
+                            }
+                        }
+                    },
                     title = {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
                                 when (state.tab) {
-                                    1 -> stringResource(R.string.history_title)
+                                    1 -> "Downloads"
                                     2 -> stringResource(R.string.settings_title)
                                     else -> "Downly"
                                 },
@@ -236,7 +249,7 @@ fun DownlyApp(
                             )
                             Text(
                                 when (state.tab) {
-                                    1 -> stringResource(R.string.history_subtitle)
+                                    1 -> "Active and completed downloads"
                                     2 -> stringResource(R.string.settings_subtitle)
                                     else -> stringResource(R.string.home_tagline)
                                 },
@@ -254,6 +267,13 @@ fun DownlyApp(
                             }
                             IconButton(onClick = { vm.setTab(2) }) {
                                 Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings_title))
+                            }
+                        } else if (state.tab == 1) {
+                            IconButton(onClick = { vm.setIsSearchActive(!state.isSearchActive) }) {
+                                Icon(Icons.Rounded.Search, contentDescription = "Search")
+                            }
+                            IconButton(onClick = { vm.clearFinished() }) {
+                                Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                             }
                         }
                     },
