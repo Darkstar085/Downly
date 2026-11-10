@@ -135,8 +135,8 @@ The interface focuses on:
 | Language              | Kotlin                             |
 | UI                    | Jetpack Compose                    |
 | Design                | Material 3                         |
-| Build                 | Gradle Kotlin DSL                  |
-| Android plugin        | Android Gradle Plugin              |
+| Build                 | Gradle 9.6.0 / Kotlin DSL           |
+| Android plugin        | Android Gradle Plugin 9.5.0        |
 | Serialization         | Kotlinx Serialization              |
 | Background work       | WorkManager                        |
 | Animations            | Lottie Compose                     |
@@ -183,7 +183,7 @@ app/
 
 ### Requirements
 
-- Android Studio and Android SDK 37.
+- Android Studio, Android SDK 37, and Gradle 9.6.0 (via the wrapper).
 - JDK 17.
 - Android 11 or later (API 30+).
 - The Downly YouTubeDL Kotlin artifacts must be available in the local Maven repository before
